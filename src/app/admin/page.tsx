@@ -24,13 +24,13 @@ export default function AdminOverviewPage() {
         <KpiCard label="Vendedores activos" value={String(vendedoresActivos().length)} icon={Store} accent="muted" />
       </div>
 
-      <TrafficChart data={trafficSeries} title="Tráfico del sitio" description="Visitas totales de electrificarte.com (últimos 14 días)" />
-
       <div className="grid gap-4 lg:grid-cols-3">
         <TopList title="Páginas más visitadas" description="Secciones y PLPs" items={topPaginas.map((p) => ({ label: p.label, sublabel: p.ruta, value: p.visitas }))} />
         <TopList title="Autos más visitados" description="PDPs con más tráfico" items={topAutos.map((a) => ({ label: a.nombre, sublabel: a.marca, value: a.visitas }))} />
         <TopList title="Marcas más visitadas" description="Agregado por marca" items={topMarcas.map((m) => ({ label: m.marca, value: m.visitas }))} />
       </div>
+
+      <TrafficChart data={trafficSeries} title="Tráfico del sitio" description="Visitas totales de electrificarte.com (últimos 14 días)" />
     </div>
   );
 }
