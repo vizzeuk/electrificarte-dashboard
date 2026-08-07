@@ -12,11 +12,13 @@ export function TrafficChart({
   title = "Tráfico del sitio",
   description = "Visitas de los últimos 14 días",
   seriesLabel = "Visitas",
+  className,
 }: {
   data: TrafficPoint[];
   title?: string;
   description?: string;
   seriesLabel?: string;
+  className?: string;
 }) {
   const chartConfig = {
     visitas: {
@@ -26,7 +28,7 @@ export function TrafficChart({
   } satisfies ChartConfig;
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>

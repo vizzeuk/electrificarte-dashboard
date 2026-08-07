@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { Users, Handshake, TrendingUp, Percent, ArrowRight } from "lucide-react";
+import { Users, Handshake, TrendingUp, Percent, ArrowRight, Flame } from "lucide-react";
 import { KpiCard } from "@/components/kpi-card";
 import { TrafficChart } from "@/components/traffic-chart";
+import { FeaturedInsightCard } from "@/components/featured-insight-card";
 import { LeadsOfertaTable } from "@/components/leads-oferta-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { leadsActivosVendedor, leadsDisponiblesVendedor, vendedorActual } from "@/lib/mock/derived";
 import { ofertasPorSemana } from "@/lib/mock/vendedor-performance";
+import { getTopTendencia } from "@/lib/mock/analytics-extra";
 
 export default function VendedorOverviewPage() {
   const activos = leadsActivosVendedor();
@@ -14,6 +16,7 @@ export default function VendedorOverviewPage() {
   const yo = vendedorActual();
   const cerrados = activos.filter((l) => l.estado === "cerrado").length;
   const recientes = [...activos].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 5);
+  const topTendencia = getTopTendencia();
 
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
@@ -23,6 +26,15 @@ export default function VendedorOverviewPage() {
           Hola, {yo.nombre} 👋 — así va tu desempeño.
         </p>
       </div>
+
+      <FeaturedInsightCard
+        icon={Flame}
+        eyebrow="Incluido en tu suscripción — analítica del sitio"
+        title={`${topTendencia.nombre} está en alza: +${topTendencia.variacionPct}%`}
+        description="Visitas, demanda por modelo, embudo de conversión y de dónde viene cada comprador — toda la analítica de electrificarte.com para decidir en qué modelos invertir."
+        trendPct={topTendencia.variacionPct}
+        href="/vendedor/analitica"
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Leads activos" value={String(activos.length)} icon={Users} accent="primary" hint="Asignados a ti" />

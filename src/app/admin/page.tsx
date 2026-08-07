@@ -1,20 +1,23 @@
-import { Sparkles, ShoppingBag, Store, Eye } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, ShoppingBag, Store, Eye, Flame, ArrowRight } from "lucide-react";
 import { KpiCard } from "@/components/kpi-card";
-import { TrafficChart } from "@/components/traffic-chart";
-import { TopList } from "@/components/top-list";
+import { FeaturedInsightCard } from "@/components/featured-insight-card";
+import { Button } from "@/components/ui/button";
 import { leadsAsesoria } from "@/lib/mock/leads-asesoria";
 import { leadsOferta } from "@/lib/mock/leads-oferta";
 import { vendedoresActivos } from "@/lib/mock/derived";
-import { trafficSeries, topPaginas, topAutos, topMarcas } from "@/lib/mock/traffic";
+import { trafficSeries } from "@/lib/mock/traffic";
+import { getTopTendencia } from "@/lib/mock/analytics-extra";
 
 export default function AdminOverviewPage() {
   const totalVisitas = trafficSeries.reduce((sum, p) => sum + p.visitas, 0);
+  const topTendencia = getTopTendencia();
 
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Resumen</h1>
-        <p className="text-muted-foreground">Analítica del sitio y estado general del negocio.</p>
+        <p className="text-muted-foreground">Estado general del negocio.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -24,13 +27,21 @@ export default function AdminOverviewPage() {
         <KpiCard label="Vendedores activos" value={String(vendedoresActivos().length)} icon={Store} accent="muted" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <TopList title="Páginas más visitadas" description="Secciones y PLPs" items={topPaginas.map((p) => ({ label: p.label, sublabel: p.ruta, value: p.visitas }))} />
-        <TopList title="Autos más visitados" description="PDPs con más tráfico" items={topAutos.map((a) => ({ label: a.nombre, sublabel: a.marca, value: a.visitas }))} />
-        <TopList title="Marcas más visitadas" description="Agregado por marca" items={topMarcas.map((m) => ({ label: m.marca, value: m.visitas }))} />
-      </div>
+      <FeaturedInsightCard
+        icon={Flame}
+        eyebrow="Esto es lo que ven los vendedores en su suscripción"
+        title={`${topTendencia.nombre} está en alza: +${topTendencia.variacionPct}%`}
+        description="Tráfico, demanda por modelo/marca, embudo de conversión y de dónde vienen los visitantes — la analítica completa que se vende a los vendedores oficiales."
+        trendPct={topTendencia.variacionPct}
+      />
 
-      <TrafficChart data={trafficSeries} title="Tráfico del sitio" description="Visitas totales de electrificarte.com (últimos 14 días)" />
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" asChild className="cursor-pointer">
+          <Link href="/admin/analitica">
+            Ver analítica completa <ArrowRight className="size-4" />
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
