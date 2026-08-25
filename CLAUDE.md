@@ -2,7 +2,9 @@
 
 Panel interno de Electrificarte: vista **Admin** (Francisco) y vista **Vendedor**.
 
-> **Contexto completo del proyecto:** este repo es una de tres piezas. El negocio, las reglas
+> **Contexto completo del proyecto:** Electrificarte son **tres proyectos separados** — la web
+> principal (`~/proyects/electrificarteweb`), la página de vendedores
+> (`vendedores.electrificarte.com`, **no está en esta máquina**) y este dashboard. El negocio, las reglas
 > y el estado general están en `~/proyects/electrificarteweb/docs/HANDOFF-CONDUCTOR.md` y
 > `~/proyects/electrificarteweb/CLAUDE.md`. Léelos antes de trabajar acá.
 
