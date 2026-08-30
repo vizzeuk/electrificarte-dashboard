@@ -1,30 +1,31 @@
-import { Store, Handshake, Trophy, Percent } from "lucide-react";
+import { Store, Handshake, Trophy } from "lucide-react";
 import { KpiCard } from "@/components/kpi-card";
-import { VendedoresTable } from "@/components/vendedores-table";
-import { vendedores } from "@/lib/mock/vendedores";
-import { vendedoresActivos, totalLeadsOfertados, tasaRespuestaPromedio } from "@/lib/mock/derived";
+import { PageHeader } from "@/components/page-header";
+import { AdminVendedoresTable } from "@/components/admin-vendedores-table";
+import { getVendedores } from "@/lib/data/admin-data";
 
-export default function VendedoresPage() {
-  const activos = vendedoresActivos();
-  const totalGanados = vendedores.reduce((sum, v) => sum + v.leadsGanados, 0);
+export const dynamic = "force-dynamic";
+
+export default async function VendedoresPage() {
+  const vendedores = await getVendedores();
+  const activos = vendedores.filter((v) => (v.estado ?? "").toLowerCase() === "activo").length;
+  const totalOfertas = vendedores.reduce((s, v) => s + v.ofertas, 0);
+  const totalGanadas = vendedores.reduce((s, v) => s + v.ganadas, 0);
 
   return (
-    <div className="flex flex-col gap-6 px-4 lg:px-6">
-      <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Vendedores</h1>
-        <p className="text-muted-foreground">
-          Red de vendedores oficiales — usa estos KPIs para diseñar incentivos por desempeño.
-        </p>
+    <div className="flex flex-col gap-8 px-4 lg:px-6">
+      <PageHeader
+        title="Vendedores"
+        subtitle="Red de vendedores oficiales — usá estos KPIs para diseñar incentivos por desempeño."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <KpiCard label="Vendedores activos" value={String(activos)} icon={Store} accent="primary" hint={`${vendedores.length} en total`} />
+        <KpiCard label="Ofertas enviadas" value={String(totalOfertas)} icon={Handshake} accent="amber" hint="Acumulado de la red" />
+        <KpiCard label="Ofertas ganadas" value={String(totalGanadas)} icon={Trophy} accent="green" />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Vendedores activos" value={String(activos.length)} icon={Store} accent="primary" hint={`${vendedores.length} en total`} />
-        <KpiCard label="Leads ofertados" value={String(totalLeadsOfertados())} icon={Handshake} accent="amber" hint="Acumulado" />
-        <KpiCard label="Leads ganados" value={String(totalGanados)} icon={Trophy} accent="green" />
-        <KpiCard label="Tasa de respuesta prom." value={`${tasaRespuestaPromedio()}%`} icon={Percent} accent="muted" />
-      </div>
-
-      <VendedoresTable vendedores={vendedores} />
+      <AdminVendedoresTable vendedores={vendedores} />
     </div>
   );
 }

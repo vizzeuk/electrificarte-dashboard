@@ -1,30 +1,26 @@
 import Link from "next/link";
-import { Sparkles, ShoppingBag, Store, Eye, Flame, ArrowRight } from "lucide-react";
+import { ShoppingBag, Store, Handshake, Flame, ArrowRight } from "lucide-react";
 import { KpiCard } from "@/components/kpi-card";
+import { PageHeader } from "@/components/page-header";
 import { FeaturedInsightCard } from "@/components/featured-insight-card";
 import { Button } from "@/components/ui/button";
-import { leadsAsesoria } from "@/lib/mock/leads-asesoria";
-import { leadsOferta } from "@/lib/mock/leads-oferta";
-import { vendedoresActivos } from "@/lib/mock/derived";
-import { trafficSeries } from "@/lib/mock/traffic";
+import { getAdminOverview } from "@/lib/data/admin-data";
 import { getTopTendencia } from "@/lib/mock/analytics-extra";
 
-export default function AdminOverviewPage() {
-  const totalVisitas = trafficSeries.reduce((sum, p) => sum + p.visitas, 0);
+export const dynamic = "force-dynamic";
+
+export default async function AdminOverviewPage() {
+  const overview = await getAdminOverview();
   const topTendencia = getTopTendencia();
 
   return (
-    <div className="flex flex-col gap-6 px-4 lg:px-6">
-      <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Resumen</h1>
-        <p className="text-muted-foreground">Estado general del negocio.</p>
-      </div>
+    <div className="flex flex-col gap-8 px-4 lg:px-6">
+      <PageHeader title="Resumen" subtitle="Estado general del negocio." />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Visitas (14 días)" value={totalVisitas.toLocaleString("es-CL")} icon={Eye} accent="primary" />
-        <KpiCard label="Leads Asesoría" value={String(leadsAsesoria.length)} icon={Sparkles} accent="amber" hint="$4.990" />
-        <KpiCard label="Leads Oferta" value={String(leadsOferta.length)} icon={ShoppingBag} accent="green" hint="$19.990" />
-        <KpiCard label="Vendedores activos" value={String(vendedoresActivos().length)} icon={Store} accent="muted" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <KpiCard label="Leads Oferta" value={String(overview.leadsOferta)} icon={ShoppingBag} accent="green" hint="Pagados ($19.990)" />
+        <KpiCard label="Vendedores activos" value={String(overview.vendedoresActivos)} icon={Store} accent="primary" hint={`${overview.vendedoresTotal} en total`} />
+        <KpiCard label="Ofertas recibidas" value={String(overview.ofertas)} icon={Handshake} accent="muted" hint="Pujas de la red" />
       </div>
 
       <FeaturedInsightCard
