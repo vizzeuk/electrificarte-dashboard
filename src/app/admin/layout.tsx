@@ -1,33 +1,49 @@
-"use client"
+import { redirect } from "next/navigation";
+import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/auth/admin";
+import { AdminShell } from "./admin-shell";
 
-import { LayoutDashboard, Sparkles, ShoppingBag, Store, BarChart3 } from "lucide-react"
-import { DashboardShell } from "@/components/dashboard-shell"
-import type { NavGroup } from "@/components/app-sidebar"
+export const dynamic = "force-dynamic";
 
-const navGroups: NavGroup[] = [
-  {
-    label: "Panel Administrador",
-    items: [
-      { title: "Resumen", url: "/admin", icon: LayoutDashboard },
-      { title: "Analítica del sitio", url: "/admin/analitica", icon: BarChart3 },
-      { title: "Leads Asesoría", url: "/admin/leads-asesoria", icon: Sparkles },
-      { title: "Leads Oferta", url: "/admin/leads-oferta", icon: ShoppingBag },
-      { title: "Vendedores", url: "/admin/vendedores", icon: Store },
-    ],
-  },
-]
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  if (!user) redirect("/login?next=/admin");
+
+  // Autenticado pero sin permisos de admin.
+  if (!isAdminEmail(user.email)) {
+    return (
+      <main className="bg-muted/30 flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black">
+          <Logo size={26} />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Acceso restringido</h1>
+          <p className="text-muted-foreground mt-1 max-w-sm">
+            Esta sección es solo para el equipo de Electrificarte.
+          </p>
+        </div>
+        <form action="/auth/signout" method="post">
+          <Button type="submit" variant="outline" className="cursor-pointer">
+            Cerrar sesión
+          </Button>
+        </form>
+      </main>
+    );
+  }
+
   return (
-    <DashboardShell
-      navGroups={navGroups}
-      user={{ name: "Francisco", role: "Administrador" }}
-      homeUrl="/admin"
-      sidebarTitle="Panel Administrador"
-      pageTitle="Panel Administrador"
-      badge="Datos de prueba"
-    >
+    <AdminShell user={{ name: "Francisco", role: "Administrador", email: user.email }}>
       {children}
-    </DashboardShell>
-  )
+    </AdminShell>
+  );
 }

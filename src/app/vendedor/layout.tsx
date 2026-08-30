@@ -1,32 +1,70 @@
-"use client"
+import { redirect } from "next/navigation";
+import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui/button";
+import { getVendorSession, isActiveVendor } from "@/lib/auth/vendor";
+import { VendedorShell } from "./vendedor-shell";
 
-import { LayoutDashboard, Users, Handshake, BarChart3 } from "lucide-react"
-import { DashboardShell } from "@/components/dashboard-shell"
-import type { NavGroup } from "@/components/app-sidebar"
-
-const navGroups: NavGroup[] = [
-  {
-    label: "Panel Vendedor",
-    items: [
-      { title: "Resumen", url: "/vendedor", icon: LayoutDashboard },
-      { title: "Analítica del sitio", url: "/vendedor/analitica", icon: BarChart3 },
-      { title: "Leads activos", url: "/vendedor/leads-activos", icon: Users },
-      { title: "Leads disponibles", url: "/vendedor/leads-disponibles", icon: Handshake },
-    ],
-  },
-]
-
-export default function VendedorLayout({ children }: { children: React.ReactNode }) {
+function BlockScreen({ title, body }: { title: string; body: string }) {
   return (
-    <DashboardShell
-      navGroups={navGroups}
-      user={{ name: "AutoMax Ñuñoa", role: "Vendedor oficial" }}
-      homeUrl="/vendedor"
-      sidebarTitle="Panel Vendedor"
-      pageTitle="Panel Vendedor"
-      badge="Datos de prueba"
+    <main className="bg-muted/30 flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black">
+        <Logo size={26} />
+      </div>
+      <div>
+        <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+        <p className="text-muted-foreground mt-1 max-w-sm">{body}</p>
+      </div>
+      <form action="/auth/signout" method="post">
+        <Button type="submit" variant="outline" className="cursor-pointer">
+          Cerrar sesión
+        </Button>
+      </form>
+    </main>
+  );
+}
+
+export default async function VendedorLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getVendorSession();
+
+  // Sin sesión → al login.
+  if (session.status === "anon") redirect("/login?next=/vendedor");
+
+  // Autenticado pero su email no está en leads_vendors.
+  if (session.status === "no_registrado") {
+    return (
+      <BlockScreen
+        title="Correo no registrado"
+        body="No encontramos una cuenta de vendedor oficial con este correo. Si creés que es un error, contactá a Electrificarte."
+      />
+    );
+  }
+
+  // Vendedor sin suscripción activa.
+  if (!isActiveVendor(session.vendor)) {
+    return (
+      <BlockScreen
+        title="Cuenta no activa"
+        body="Tu cuenta de vendedor oficial todavía no está activa. Una vez confirmada tu suscripción vas a poder entrar al panel."
+      />
+    );
+  }
+
+  const vendor = session.vendor;
+  const displayName =
+    vendor.nombre_concesionario ||
+    [vendor.nombre, vendor.apellido].filter(Boolean).join(" ") ||
+    vendor.email ||
+    "Vendedor";
+
+  return (
+    <VendedorShell
+      user={{ name: displayName, role: "Vendedor oficial", email: vendor.email ?? undefined }}
     >
       {children}
-    </DashboardShell>
-  )
+    </VendedorShell>
+  );
 }

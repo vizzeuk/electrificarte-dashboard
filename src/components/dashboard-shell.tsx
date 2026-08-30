@@ -6,7 +6,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 
 interface DashboardShellProps {
   navGroups: NavGroup[]
-  user: { name: string; role: string }
+  user: { name: string; role: string; email?: string }
   homeUrl: string
   sidebarTitle: string
   pageTitle: string

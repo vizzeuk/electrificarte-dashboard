@@ -1,31 +1,22 @@
-"use client";
+import { PoolTable } from "@/components/pool-table";
+import { getPoolLeads, getMisOfertas } from "@/lib/data/vendor-data";
 
-import { useState } from "react";
-import { LeadsOfertaTable } from "@/components/leads-oferta-table";
-import { OfertarDialog } from "@/components/ofertar-dialog";
-import { leadsDisponiblesVendedor } from "@/lib/mock/derived";
+export const dynamic = "force-dynamic";
 
-export default function LeadsDisponiblesPage() {
-  const [ofertados, setOfertados] = useState<Set<string>>(new Set());
-  const leads = leadsDisponiblesVendedor().filter((l) => !ofertados.has(l.id));
+export default async function LeadsDisponiblesPage() {
+  const [leads, misOfertas] = await Promise.all([getPoolLeads(), getMisOfertas()]);
+  const ofertadosLeadIds = new Set(misOfertas.map((o) => o.lead_id));
 
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Leads disponibles</h1>
         <p className="text-muted-foreground">
-          Leads pagados aún sin vendedor asignado — {leads.length} disponibles para ofertar.
+          Leads pagados disponibles para todos los vendedores oficiales —{" "}
+          {leads.length} disponibles. Cualquiera puede ofertar; no hay asignación previa.
         </p>
       </div>
-      <LeadsOfertaTable
-        leads={leads}
-        actionColumn={(lead) => (
-          <OfertarDialog
-            lead={lead}
-            onConfirm={() => setOfertados((prev) => new Set(prev).add(lead.id))}
-          />
-        )}
-      />
+      <PoolTable leads={leads} ofertadosLeadIds={ofertadosLeadIds} />
     </div>
   );
 }

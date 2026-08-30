@@ -1,18 +1,21 @@
-import { LeadsOfertaTable } from "@/components/leads-oferta-table";
-import { leadsActivosVendedor } from "@/lib/mock/derived";
+import { MisOfertasTable } from "@/components/mis-ofertas-table";
+import { getMisOfertas } from "@/lib/data/vendor-data";
 
-export default function LeadsActivosPage() {
-  const leads = leadsActivosVendedor();
+export const dynamic = "force-dynamic";
+
+export default async function MisOfertasPage() {
+  const ofertas = await getMisOfertas();
 
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Leads activos</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Mis ofertas</h1>
         <p className="text-muted-foreground">
-          Leads que ya te fueron asignados — {leads.length} en total.
+          Tus pujas y su estado — {ofertas.length} en total. El puntaje y el
+          resultado los define el sistema al evaluar.
         </p>
       </div>
-      <LeadsOfertaTable leads={leads} />
+      <MisOfertasTable ofertas={ofertas} />
     </div>
   );
 }

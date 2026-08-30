@@ -28,7 +28,7 @@ export interface NavGroup {
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   navGroups: NavGroup[]
-  user: { name: string; role: string }
+  user: { name: string; role: string; email?: string }
   homeUrl: string
   title: string
 }
