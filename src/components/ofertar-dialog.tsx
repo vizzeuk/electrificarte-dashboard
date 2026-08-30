@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ToggleGroup,
@@ -50,8 +50,11 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
   const [horas, setHoras] = useState("48");
   const [anio, setAnio] = useState("");
   const [color, setColor] = useState("");
-  const [aceptaFin, setAceptaFin] = useState(false);
+
+  // Regalías: opcional, con monto + descripción.
+  const [incluyeRegalias, setIncluyeRegalias] = useState(false);
   const [regalias, setRegalias] = useState("");
+  const [regaliasDesc, setRegaliasDesc] = useState("");
 
   // Alternativa (solo si no tiene el modelo exacto). Si el lead no trae modelo
   // pedido, se ofrece libre desde el arranque.
@@ -65,8 +68,9 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
     setHoras("48");
     setAnio("");
     setColor("");
-    setAceptaFin(false);
+    setIncluyeRegalias(false);
     setRegalias("");
+    setRegaliasDesc("");
     setAlternativa(!tieneModeloPedido);
     setAltMarca("");
     setAltModelo("");
@@ -91,8 +95,8 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
         precio_oferta: Number(precio),
         horas_entrega: Number(horas),
         version_match: versionMatch,
-        acepta_financiamiento: aceptaFin,
-        valor_regalias: Number(regalias) || 0,
+        valor_regalias: incluyeRegalias ? Number(regalias) || 0 : 0,
+        regalias_descripcion: incluyeRegalias ? regaliasDesc || null : null,
         marca_ofertada: marca,
         modelo_ofertado: modelo,
         anio_ofertado: Number(anio),
@@ -216,37 +220,51 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="horas">Horas de entrega (≤96)</Label>
-              <Input
-                id="horas"
-                inputMode="numeric"
-                placeholder="48"
-                value={horas}
-                onChange={(e) => setHoras(e.target.value.replace(/\D/g, "").slice(0, 3))}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="regalias">Regalías (CLP, opcional)</Label>
-              <Input
-                id="regalias"
-                inputMode="numeric"
-                placeholder="0"
-                value={regalias}
-                onChange={(e) => setRegalias(e.target.value.replace(/\D/g, ""))}
-              />
-            </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="horas">Horas de entrega (≤96)</Label>
+            <Input
+              id="horas"
+              inputMode="numeric"
+              placeholder="48"
+              value={horas}
+              onChange={(e) => setHoras(e.target.value.replace(/\D/g, "").slice(0, 3))}
+            />
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <Label htmlFor="acepta-fin" className="cursor-pointer">Acepto financiamiento</Label>
-              <p className="text-muted-foreground text-xs">
-                {lead.financing ? `El cliente indicó: ${lead.financing}` : "Método de pago no informado"}
-              </p>
-            </div>
-            <Switch id="acepta-fin" checked={aceptaFin} onCheckedChange={setAceptaFin} className="cursor-pointer" />
+          {/* Regalías / beneficios — opcional */}
+          <div className="grid gap-3 rounded-lg border p-3">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={incluyeRegalias}
+                onCheckedChange={(v) => setIncluyeRegalias(v === true)}
+                className="cursor-pointer"
+              />
+              <span className="cursor-pointer font-medium">¿Incluye regalías o beneficios?</span>
+            </label>
+            {incluyeRegalias && (
+              <>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="regalias">Valor de las regalías (CLP)</Label>
+                  <Input
+                    id="regalias"
+                    inputMode="numeric"
+                    placeholder="Ej: 500000"
+                    value={regalias}
+                    onChange={(e) => setRegalias(e.target.value.replace(/\D/g, ""))}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="regalias-desc">¿Qué incluye?</Label>
+                  <Textarea
+                    id="regalias-desc"
+                    rows={2}
+                    placeholder="Ej: bono de mantención por 1 año + set de accesorios"
+                    value={regaliasDesc}
+                    onChange={(e) => setRegaliasDesc(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 

@@ -58,14 +58,15 @@ export interface Oferta {
   motivo_descalificacion: string | null;
 }
 
-/** Payload que el dashboard escribe al crear una puja (el resto lo llena el backend). */
+/** Payload que el dashboard escribe al crear una puja (el resto lo llena el backend).
+ * El financiamiento NO va acá: lo define el perfil del vendedor y lo matchea el backend. */
 export interface NuevaOfertaInput {
   lead_id: number;
   precio_oferta: number;
   horas_entrega: number;
   version_match: VersionMatch;
-  acepta_financiamiento: boolean;
   valor_regalias: number;
+  regalias_descripcion: string | null;
   marca_ofertada: string;
   modelo_ofertado: string;
   anio_ofertado: number;

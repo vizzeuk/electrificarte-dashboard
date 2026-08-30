@@ -48,14 +48,15 @@ export async function crearOferta(
     return { ok: false, error: "Año del vehículo inválido." };
 
   const supabase = await createClient();
+  // El financiamiento NO se manda: el backend lo deriva del perfil del vendedor.
   const { error } = await supabase.from("ofertas").insert({
     lead_id: input.lead_id,
     vendor_id: vendor.id,
     precio_oferta: Math.round(input.precio_oferta),
     horas_entrega: Math.round(input.horas_entrega),
     version_match: input.version_match,
-    acepta_financiamiento: input.acepta_financiamiento,
     valor_regalias: Math.round(input.valor_regalias || 0),
+    regalias_descripcion: input.regalias_descripcion?.trim() || null,
     marca_ofertada: input.marca_ofertada.trim(),
     modelo_ofertado: input.modelo_ofertado.trim(),
     anio_ofertado: input.anio_ofertado,
