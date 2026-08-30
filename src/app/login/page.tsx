@@ -48,7 +48,7 @@ function LoginForm() {
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-black">
           <Logo size={26} />
         </div>
-        <CardTitle className="text-xl">Iniciar sesión</CardTitle>
+        <CardTitle className="font-display text-2xl">Iniciar sesión</CardTitle>
         <CardDescription>
           Panel de vendedores oficiales de Electrificarte.
         </CardDescription>

@@ -11,7 +11,7 @@ export default function LeadsAsesoriaPage() {
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Leads Asesoría IA — $4.990</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Leads Asesoría IA — $4.990</h1>
         <p className="text-muted-foreground">Personas que contrataron la asesoría por WhatsApp con Francisco IA.</p>
       </div>
 

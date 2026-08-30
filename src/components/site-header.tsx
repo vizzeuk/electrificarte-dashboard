@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge"
 
 export function SiteHeader({ title, badge }: { title: string; badge?: string }) {
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
-      <div className="flex w-full items-center gap-1 px-4 py-3 lg:gap-2 lg:px-6">
+    <header className="bg-background/80 sticky top-0 z-40 flex h-(--header-height) shrink-0 items-center border-b backdrop-blur-md transition-[width,height] ease-linear">
+      <div className="flex w-full items-center gap-2 px-4 lg:px-6">
         <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-        <h1 className="text-base font-medium">{title}</h1>
+        <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" />
+        <h1 className="font-display text-lg font-semibold tracking-tight">{title}</h1>
         {badge && (
-          <Badge variant="outline" className="ml-1">
+          <Badge variant="outline" className="ml-1 font-normal">
             {badge}
           </Badge>
         )}

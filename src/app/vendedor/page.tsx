@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Users, Handshake, Trophy, Clock, ArrowRight, Flame } from "lucide-react";
 import { KpiCard } from "@/components/kpi-card";
+import { PageHeader } from "@/components/page-header";
 import { FeaturedInsightCard } from "@/components/featured-insight-card";
 import { MisOfertasTable } from "@/components/mis-ofertas-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,13 +29,11 @@ export default async function VendedorOverviewPage() {
   const saludo = vendor?.nombre || vendor?.nombre_concesionario || "";
 
   return (
-    <div className="flex flex-col gap-6 px-4 lg:px-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Resumen</h1>
-        <p className="text-muted-foreground">
-          Hola{saludo ? `, ${saludo}` : ""} 👋 — así va tu actividad.
-        </p>
-      </div>
+    <div className="flex flex-col gap-8 px-4 lg:px-6">
+      <PageHeader
+        title="Resumen"
+        subtitle={`Hola${saludo ? `, ${saludo}` : ""} 👋 — así va tu actividad.`}
+      />
 
       <FeaturedInsightCard
         icon={Flame}

@@ -3,7 +3,7 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { inter } from "@/lib/fonts";
+import { inter, spaceGrotesk } from "@/lib/fonts";
 
 export const metadata: Metadata = {
   title: "Electrificarte — Dashboard",
@@ -17,7 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.variable} antialiased`} suppressHydrationWarning>
+    <html
+      lang="es"
+      className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}
+      suppressHydrationWarning
+    >
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}

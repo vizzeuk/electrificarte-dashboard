@@ -11,7 +11,7 @@ export default function VendedoresPage() {
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Vendedores</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Vendedores</h1>
         <p className="text-muted-foreground">
           Red de vendedores oficiales — usa estos KPIs para diseñar incentivos por desempeño.
         </p>

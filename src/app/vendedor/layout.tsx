@@ -11,7 +11,7 @@ function BlockScreen({ title, body }: { title: string; body: string }) {
         <Logo size={26} />
       </div>
       <div>
-        <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
         <p className="text-muted-foreground mt-1 max-w-sm">{body}</p>
       </div>
       <form action="/auth/signout" method="post">

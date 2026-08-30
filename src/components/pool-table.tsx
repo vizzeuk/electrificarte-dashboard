@@ -16,22 +16,22 @@ export function PoolTable({
   ofertadosLeadIds: Set<number>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <Table>
+    <div className="overflow-x-auto rounded-2xl border">
+      <Table className="[&_tbody_td]:py-4">
         <TableHeader>
-          <TableRow>
-            <TableHead>Busca</TableHead>
-            <TableHead>Ubicación</TableHead>
-            <TableHead>Pago</TableHead>
-            <TableHead>Parte de pago</TableHead>
-            <TableHead>Publicado</TableHead>
-            <TableHead className="text-right">Acción</TableHead>
+          <TableRow className="bg-muted/40 hover:bg-muted/40">
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">Busca</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">Ubicación</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">Pago</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">Parte de pago</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">Publicado</TableHead>
+            <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Acción</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {leads.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
+              <TableCell colSpan={6} className="text-muted-foreground py-12 text-center">
                 No hay leads disponibles por ahora.
               </TableCell>
             </TableRow>
@@ -44,7 +44,9 @@ export function PoolTable({
             return (
               <TableRow key={lead.id}>
                 <TableCell>
-                  <div className="font-medium">{lead.target_model || "—"}</div>
+                  <div className="font-display text-base font-semibold">
+                    {lead.target_model || "Sin modelo especificado"}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {[lead.comuna, lead.region].filter(Boolean).join(", ") || "—"}
@@ -60,7 +62,7 @@ export function PoolTable({
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">{formatFecha(lead.created_at)}</TableCell>
+                <TableCell className="text-muted-foreground tabular-nums">{formatFecha(lead.created_at)}</TableCell>
                 <TableCell className="text-right">
                   {yaOfertado ? (
                     <Badge variant="outline" className="text-muted-foreground">Ofertado</Badge>

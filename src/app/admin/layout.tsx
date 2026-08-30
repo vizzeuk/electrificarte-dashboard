@@ -27,7 +27,7 @@ export default async function AdminLayout({
           <Logo size={26} />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Acceso restringido</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Acceso restringido</h1>
           <p className="text-muted-foreground mt-1 max-w-sm">
             Esta sección es solo para el equipo de Electrificarte.
           </p>
