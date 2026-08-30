@@ -1,5 +1,6 @@
 import { Flame, Eye, Users, Clock, Percent } from "lucide-react";
 import { KpiCard } from "@/components/kpi-card";
+import { PageHeader } from "@/components/page-header";
 import { TrafficChart } from "@/components/traffic-chart";
 import { TopList } from "@/components/top-list";
 import { RankingCard } from "@/components/ranking-card";
@@ -44,10 +45,10 @@ export function SiteAnalytics() {
 
   return (
     <div className="flex flex-col gap-8 px-4 lg:px-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Analítica del sitio</h1>
-        <p className="text-muted-foreground">Tráfico, demanda por modelo y comportamiento de los visitantes de electrificarte.com.</p>
-      </div>
+      <PageHeader
+        title="Analítica del sitio"
+        subtitle="Tráfico, demanda por modelo y comportamiento de los visitantes de electrificarte.com."
+      />
 
       <FeaturedInsightCard
         icon={Flame}

@@ -49,7 +49,7 @@
  * fondos oscuros = negro obsidiana #000000.
  */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --background: #ffffff;
   --foreground: #111827;
   --card: #ffffff;
