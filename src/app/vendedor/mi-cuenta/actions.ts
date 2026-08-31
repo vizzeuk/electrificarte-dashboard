@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentVendor } from "@/lib/auth/vendor";
 import { createServiceClient } from "@/lib/supabase/service";
-import { PREVIEW_MODE } from "@/lib/mock/preview";
 
 /**
  * Campos que el vendedor puede rectificar de su propio perfil (derecho de
@@ -43,8 +42,6 @@ export async function actualizarMisDatos(input: MisDatosInput): Promise<Actualiz
     patch[campo] = v === "" ? null : v;
   }
   if (Object.keys(patch).length === 0) return { ok: false, error: "No hay cambios para guardar." };
-
-  if (PREVIEW_MODE) return { ok: true }; // PREVIEW_MODE: sin backend, no persiste
 
   const db = createServiceClient();
   const { error } = await db.from("leads_vendors").update(patch).eq("id", vendor.id);
