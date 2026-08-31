@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/auth/admin";
+import { PREVIEW_MODE, previewAdminEmail } from "@/lib/mock/preview";
 import { AdminShell } from "./admin-shell";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,15 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // PREVIEW_MODE: sin backend, entrar como Francisco con datos de ejemplo.
+  if (PREVIEW_MODE) {
+    return (
+      <AdminShell user={{ name: "Francisco", role: "Administrador", email: previewAdminEmail }}>
+        {children}
+      </AdminShell>
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

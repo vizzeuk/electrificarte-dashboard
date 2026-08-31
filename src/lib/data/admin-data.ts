@@ -1,6 +1,12 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getAdminEmail } from "@/lib/auth/admin";
+import {
+  PREVIEW_MODE,
+  previewAdminOverview,
+  previewAdminLeads,
+  previewAdminVendedores,
+} from "@/lib/mock/preview";
 
 // El admin ve datos completos (incluida PII), por eso lee con service role.
 // SIEMPRE detrás del gating de admin: cada función valida sesión de admin.
@@ -48,6 +54,7 @@ async function assertAdmin(): Promise<boolean> {
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
+  if (PREVIEW_MODE) return previewAdminOverview(); // PREVIEW_MODE
   if (!(await assertAdmin())) {
     return { leadsOferta: 0, vendedoresTotal: 0, vendedoresActivos: 0, ofertas: 0 };
   }
@@ -67,6 +74,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
 }
 
 export async function getLeadsOferta(): Promise<AdminLead[]> {
+  if (PREVIEW_MODE) return previewAdminLeads(); // PREVIEW_MODE
   if (!(await assertAdmin())) return [];
   const db = createServiceClient();
   const { data, error } = await db
@@ -82,6 +90,7 @@ export async function getLeadsOferta(): Promise<AdminLead[]> {
 }
 
 export async function getVendedores(): Promise<AdminVendedor[]> {
+  if (PREVIEW_MODE) return previewAdminVendedores(); // PREVIEW_MODE
   if (!(await assertAdmin())) return [];
   const db = createServiceClient();
   const [{ data: vendedores, error: vErr }, { data: ofertas, error: oErr }] = await Promise.all([

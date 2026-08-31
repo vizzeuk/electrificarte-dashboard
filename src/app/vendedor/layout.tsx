@@ -54,9 +54,11 @@ export default async function VendedorLayout({
   }
 
   const vendor = session.vendor;
+  // Mostramos el nombre de la persona, no el del comercio (ese queda guardado y
+  // editable en "Mi cuenta", pero no es lo relevante en la barra).
   const displayName =
-    vendor.nombre_concesionario ||
     [vendor.nombre, vendor.apellido].filter(Boolean).join(" ") ||
+    vendor.nombre_concesionario ||
     vendor.email ||
     "Vendedor";
 

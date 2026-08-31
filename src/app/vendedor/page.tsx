@@ -39,7 +39,7 @@ export default async function VendedorOverviewPage() {
         icon={Flame}
         eyebrow="Incluido en tu suscripción — analítica del sitio"
         title={`${topTendencia.nombre} está en alza: +${topTendencia.variacionPct}%`}
-        description="Visitas, demanda por modelo, embudo de conversión y de dónde viene cada comprador — toda la analítica de electrificarte.com para decidir en qué modelos invertir."
+        description="Visitas, demanda por modelo, embudo de conversión y de dónde viene cada comprador — toda la analítica de electrificarte.com para saber qué modelos ofertar y cómo competir mejor."
         trendPct={topTendencia.variacionPct}
         href="/vendedor/analitica"
       />

@@ -1,13 +1,19 @@
+"use client";
+
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
+import { OfertaDetalleDialog } from "@/components/oferta-detalle-dialog";
 import { formatCLP, formatFecha } from "@/lib/utils";
 import type { Oferta } from "@/lib/db/types";
 
 /**
- * "Mis ofertas" — las pujas propias del vendedor con su estado y score.
- * El estado/score los escribe el backend (n8n) tras evaluar; acá solo se leen.
+ * "Mis ofertas" — las pujas propias del vendedor con su estado y score. Cada fila es
+ * clickeable y abre el detalle completo de la puja.
  */
 export function MisOfertasTable({ ofertas }: { ofertas: Oferta[] }) {
+  const [sel, setSel] = useState<Oferta | null>(null);
+
   return (
     <div className="overflow-x-auto rounded-2xl border">
       <Table className="[&_tbody_td]:py-4">
@@ -34,7 +40,11 @@ export function MisOfertasTable({ ofertas }: { ofertas: Oferta[] }) {
               .filter(Boolean)
               .join(" ");
             return (
-              <TableRow key={o.id}>
+              <TableRow
+                key={o.id}
+                onClick={() => setSel(o)}
+                className="cursor-pointer hover:bg-muted/50"
+              >
                 <TableCell>
                   <div className="font-display text-base font-semibold">{vehiculo || "—"}</div>
                   {o.descalificada && o.motivo_descalificacion && (
@@ -59,6 +69,10 @@ export function MisOfertasTable({ ofertas }: { ofertas: Oferta[] }) {
           })}
         </TableBody>
       </Table>
+
+      {sel && (
+        <OfertaDetalleDialog oferta={sel} open={!!sel} onOpenChange={(o) => !o && setSel(null)} />
+      )}
     </div>
   );
 }

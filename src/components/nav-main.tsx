@@ -46,9 +46,9 @@ export function NavMain({
   }
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-[0.7rem] font-semibold uppercase tracking-wider">{label}</SidebarGroupLabel>
-      <SidebarMenu>
+    <SidebarGroup className="px-3 py-2">
+      <SidebarGroupLabel className="mb-1 px-2 text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground/70">{label}</SidebarGroupLabel>
+      <SidebarMenu className="gap-1.5">
         {items.map((item) => (
           <Collapsible
             key={item.title}
@@ -85,7 +85,7 @@ export function NavMain({
                   </CollapsibleContent>
                 </>
               ) : (
-                <SidebarMenuButton asChild tooltip={item.title} className="cursor-pointer" isActive={pathname === item.url}>
+                <SidebarMenuButton asChild tooltip={item.title} className="h-9 gap-3 cursor-pointer" isActive={pathname === item.url}>
                   <Link href={item.url}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>

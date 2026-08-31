@@ -3,7 +3,6 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,9 +44,12 @@ function LoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-black">
-          <Logo size={26} />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo-electrificarte.webp"
+          alt="Electrificarte"
+          className="mx-auto mb-4 h-9 w-auto object-contain brightness-0 dark:brightness-0 dark:invert"
+        />
         <CardTitle className="font-display text-2xl">Iniciar sesión</CardTitle>
         <CardDescription>
           Panel de vendedores oficiales de Electrificarte.
