@@ -173,16 +173,20 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
                 </div>
               </div>
               {tieneModeloPedido && (
-                <div className="grid gap-1.5">
-                  <Label>Comparada con lo que pidió</Label>
+                <div className="grid gap-2">
+                  <Label>¿Cómo se compara con lo que pidió?</Label>
                   <ToggleGroup
                     type="single"
                     value={comparacion}
                     onValueChange={(v) => v && setComparacion(v as VersionMatch)}
-                    className="justify-start"
+                    className="grid w-full grid-cols-3 gap-2"
                   >
                     {COMPARACION.map((c) => (
-                      <ToggleGroupItem key={c.value} value={c.value} className="cursor-pointer px-3">
+                      <ToggleGroupItem
+                        key={c.value}
+                        value={c.value}
+                        className="h-auto cursor-pointer rounded-lg border py-2.5 text-sm font-medium data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
                         {c.label}
                       </ToggleGroupItem>
                     ))}
