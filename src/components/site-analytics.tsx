@@ -7,6 +7,8 @@ import { RankingCard } from "@/components/ranking-card";
 import { DonutBreakdown } from "@/components/donut-breakdown";
 import { FunnelCard } from "@/components/funnel-card";
 import { FeaturedInsightCard } from "@/components/featured-insight-card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ConcesionarioVentas } from "@/lib/data/ranking-data";
 import { trafficSeries, topPaginas, topAutos, topMarcas } from "@/lib/mock/traffic";
 import {
   trafficSources,
@@ -30,7 +32,13 @@ function SectionEyebrow({ children }: { children: React.ReactNode }) {
  * `action` es un slot opcional para la capa de "qué hacer con el dato". Es específica del
  * vendedor (se filtra por sus marcas), así que la inyecta la página de vendedor y el admin
  * la deja vacía — los números siguen siendo idénticos en ambos roles. */
-export function SiteAnalytics({ action }: { action?: React.ReactNode } = {}) {
+export function SiteAnalytics({
+  action,
+  topConcesionarios = [],
+}: {
+  action?: React.ReactNode;
+  topConcesionarios?: ConcesionarioVentas[];
+} = {}) {
   const totalVisitas = trafficSeries.reduce((sum, p) => sum + p.visitas, 0);
   const last7 = trafficSeries.slice(-7).reduce((sum, p) => sum + p.visitas, 0);
   const prev7 = trafficSeries.slice(0, 7).reduce((sum, p) => sum + p.visitas, 0);
@@ -129,6 +137,25 @@ export function SiteAnalytics({ action }: { action?: React.ReactNode } = {}) {
           <TopList title="Páginas más visitadas" description="Secciones y PLPs" items={topPaginas.map((p) => ({ label: p.label, sublabel: p.ruta, value: p.visitas }))} />
           <TopList title="Autos más visitados" description="PDPs con más tráfico" items={topAutos.map((a) => ({ label: a.nombre, sublabel: a.marca, value: a.visitas }))} />
         </div>
+      </div>
+
+      <div className="space-y-3">
+        <SectionEyebrow>Red de vendedores</SectionEyebrow>
+        {topConcesionarios.length > 0 ? (
+          <TopList
+            title="Concesionarios que más venden"
+            description="Ventas cerradas por concesionario en la red"
+            items={topConcesionarios.map((c) => ({ label: c.concesionario, sublabel: c.region ?? undefined, value: c.ventas }))}
+            valueLabel="ventas"
+          />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Concesionarios que más venden</CardTitle>
+              <CardDescription>Todavía no hay ventas cerradas registradas. El ranking aparece a medida que se cierran ofertas.</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
       </div>
 
       <div className="space-y-3">
