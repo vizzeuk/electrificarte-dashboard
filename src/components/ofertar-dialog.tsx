@@ -7,10 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -175,22 +172,27 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
               {tieneModeloPedido && (
                 <div className="grid gap-2">
                   <Label>¿Cómo se compara con lo que pidió?</Label>
-                  <ToggleGroup
-                    type="single"
-                    value={comparacion}
-                    onValueChange={(v) => v && setComparacion(v as VersionMatch)}
-                    className="grid w-full grid-cols-3 gap-2"
-                  >
-                    {COMPARACION.map((c) => (
-                      <ToggleGroupItem
-                        key={c.value}
-                        value={c.value}
-                        className="h-auto cursor-pointer rounded-lg border py-2.5 text-sm font-medium data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                      >
-                        {c.label}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
+                  <div className="grid grid-cols-3 gap-2">
+                    {COMPARACION.map((c) => {
+                      const active = comparacion === c.value;
+                      return (
+                        <button
+                          key={c.value}
+                          type="button"
+                          onClick={() => setComparacion(c.value)}
+                          aria-pressed={active}
+                          className={cn(
+                            "cursor-pointer rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                            active
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "hover:bg-accent hover:text-accent-foreground",
+                          )}
+                        >
+                          {c.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

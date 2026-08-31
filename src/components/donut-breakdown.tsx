@@ -36,7 +36,7 @@ export function DonutBreakdown({
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="flex flex-col items-center gap-6 sm:flex-row">
+      <CardContent className="@container flex flex-col items-center gap-6 @sm:flex-row">
         <ChartContainer config={chartConfig} className="aspect-square h-[160px] w-[160px] shrink-0">
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
@@ -47,7 +47,7 @@ export function DonutBreakdown({
             </Pie>
           </PieChart>
         </ChartContainer>
-        <div className="w-full flex-1 space-y-2.5">
+        <div className="w-full min-w-0 flex-1 space-y-2.5">
           {items.map((item, i) => (
             <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
               <span className="flex min-w-0 items-center gap-2">
