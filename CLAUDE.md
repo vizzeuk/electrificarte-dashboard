@@ -23,7 +23,7 @@ Corre en el puerto **3001** (`npm run dev`) para no chocar con electrificarteweb
 
 ```
 src/app/admin/      Resumen · Analítica · Leads Asesoría · Leads Oferta · Vendedores
-src/app/vendedor/   Resumen · Analítica · Leads activos · Leads disponibles
+src/app/vendedor/   Resumen · Analítica · Mis ofertas · Leads disponibles · Mi cuenta (datos, Ley 21.719)
 src/components/     Componentes propios (kpi-card, top-list, site-analytics…)
 src/components/ui/  shadcn — no editar a mano, se regeneran
 src/lib/mock/       Todos los datos simulados + tipos
@@ -42,9 +42,12 @@ gráficos/ranking > listas. La fila #1 de cualquier ranking se destaca con fondo
 
 - **La analítica del sitio es el producto que se le vende a los vendedores**, no una
   herramienta interna. Por eso `/admin/analitica` y `/vendedor/analitica` renderizan el mismo
-  componente (`site-analytics.tsx`) — deben mostrar exactamente lo mismo.
-- Los "tips de venta" (`lib/mock/sales-tips.ts`) se derivan por reglas de la propia analítica.
-  Es la capa de "qué hacer con el dato", que es lo que justifica pagar por esto.
+  componente (`site-analytics.tsx`) — los **números** deben ser exactamente iguales.
+- Los "tips de venta" (`lib/mock/sales-tips.ts`) son la capa de "qué hacer con el dato" y son
+  **específicos del vendedor**: `generateSalesTips({ marcas })` filtra por las marcas que ese
+  vendedor realmente ofrece (`leads_vendors.marcas`) — un tip sobre una marca que no vende es
+  ruido. Por eso NO viven en `site-analytics.tsx` (el admin no oferta): se inyectan como slot
+  `action` solo desde `/vendedor/analitica`. No devolverlos al componente compartido.
 - `KpiCard` es Server Component a propósito. Recibe `icon` como referencia de componente (una
   función), que no cruza el límite RSC: si se marca `"use client"`, el build falla. El
   sparkline vive aparte en `sparkline.tsx`, que sí es cliente.

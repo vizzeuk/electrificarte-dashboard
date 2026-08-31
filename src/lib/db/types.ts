@@ -56,6 +56,15 @@ export interface Oferta {
   score_total: number | null;
   descalificada: boolean | null;
   motivo_descalificacion: string | null;
+  // Campos que llena el backend (n8n) durante el ciclo de vida de la puja. Opcionales:
+  // hoy pueden venir null y se muestran solo cuando existen.
+  regalias_descripcion?: string | null;
+  cercania_zona?: string | null;
+  score_desglose?: Record<string, number> | null;
+  enviada_cliente_at?: string | null;
+  respondida_at?: string | null;
+  aceptada_at?: string | null;
+  updated_at?: string | null;
 }
 
 /** Payload que el dashboard escribe al crear una puja (el resto lo llena el backend).

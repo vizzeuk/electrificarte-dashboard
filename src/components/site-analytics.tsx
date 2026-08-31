@@ -7,7 +7,6 @@ import { RankingCard } from "@/components/ranking-card";
 import { DonutBreakdown } from "@/components/donut-breakdown";
 import { FunnelCard } from "@/components/funnel-card";
 import { FeaturedInsightCard } from "@/components/featured-insight-card";
-import { SalesTipsCard } from "@/components/sales-tips-card";
 import { trafficSeries, topPaginas, topAutos, topMarcas } from "@/lib/mock/traffic";
 import {
   trafficSources,
@@ -19,7 +18,6 @@ import {
   engagement,
   getTopTendencia,
 } from "@/lib/mock/analytics-extra";
-import { generateSalesTips } from "@/lib/mock/sales-tips";
 
 function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">{children}</p>;
@@ -27,8 +25,12 @@ function SectionEyebrow({ children }: { children: React.ReactNode }) {
 
 /** Página completa de analítica del sitio — compartida 1:1 entre /admin/analitica y
  * /vendedor/analitica. Este es el producto que Francisco vende a los vendedores: tráfico,
- * demanda por modelo/marca, embudo de conversión y comportamiento de los visitantes. */
-export function SiteAnalytics() {
+ * demanda por modelo/marca, embudo de conversión y comportamiento de los visitantes.
+ *
+ * `action` es un slot opcional para la capa de "qué hacer con el dato". Es específica del
+ * vendedor (se filtra por sus marcas), así que la inyecta la página de vendedor y el admin
+ * la deja vacía — los números siguen siendo idénticos en ambos roles. */
+export function SiteAnalytics({ action }: { action?: React.ReactNode } = {}) {
   const totalVisitas = trafficSeries.reduce((sum, p) => sum + p.visitas, 0);
   const last7 = trafficSeries.slice(-7).reduce((sum, p) => sum + p.visitas, 0);
   const prev7 = trafficSeries.slice(0, 7).reduce((sum, p) => sum + p.visitas, 0);
@@ -41,8 +43,6 @@ export function SiteAnalytics() {
   const ultimoPaso = funnelConversion[funnelConversion.length - 1].usuarios;
   const conversionPct = Math.round((ultimoPaso / primerPaso) * 1000) / 10;
 
-  const salesTips = generateSalesTips();
-
   return (
     <div className="flex flex-col gap-8 px-4 lg:px-6">
       <PageHeader
@@ -54,7 +54,7 @@ export function SiteAnalytics() {
         icon={Flame}
         eyebrow="Modelo en mayor tendencia esta semana"
         title={`${topTendencia.nombre} — ${topTendencia.marca}`}
-        description={`${topTendencia.visitas.toLocaleString("es-CL")} visitas a su ficha esta semana, con el mayor crecimiento del catálogo. Una señal temprana de en qué modelo conviene enfocar stock y ofertas.`}
+        description={`${topTendencia.visitas.toLocaleString("es-CL")} visitas a su ficha esta semana, con el mayor crecimiento del catálogo. Una señal temprana de hacia qué modelo se está moviendo la demanda.`}
         trendPct={topTendencia.variacionPct}
       />
 
@@ -91,10 +91,12 @@ export function SiteAnalytics() {
         />
       </div>
 
-      <div className="space-y-3">
-        <SectionEyebrow>Acción recomendada</SectionEyebrow>
-        <SalesTipsCard tips={salesTips} />
-      </div>
+      {action && (
+        <div className="space-y-3">
+          <SectionEyebrow>Acción recomendada</SectionEyebrow>
+          {action}
+        </div>
+      )}
 
       <div className="space-y-3">
         <SectionEyebrow>Tráfico</SectionEyebrow>

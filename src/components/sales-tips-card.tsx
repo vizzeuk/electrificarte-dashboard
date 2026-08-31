@@ -10,7 +10,7 @@ export function SalesTipsCard({ tips }: { tips: SalesTip[] }) {
     <Card>
       <CardHeader>
         <CardTitle>Tips de venta para esta semana</CardTitle>
-        <CardDescription>Sugerencias accionables en base a la analítica de más abajo</CardDescription>
+        <CardDescription>Cruzamos la analítica del sitio con las marcas que ofreces — solo lo que puedes accionar</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {tips.map((tip) => (

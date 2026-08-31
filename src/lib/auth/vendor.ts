@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { PREVIEW_MODE, previewVendor } from "@/lib/mock/preview";
 
 export interface VendorRow {
   id: string;
@@ -51,6 +52,7 @@ export type VendorSession =
   | { status: "ok"; vendor: VendorRow };
 
 export async function getVendorSession(): Promise<VendorSession> {
+  if (PREVIEW_MODE) return { status: "ok", vendor: previewVendor }; // PREVIEW_MODE
   const supabase = await createClient();
   const {
     data: { user },
