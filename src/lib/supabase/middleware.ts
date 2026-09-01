@@ -1,6 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { PREVIEW_MODE } from "@/lib/mock/preview";
 
 /**
  * Refresca la sesión de Supabase en cada request y protege las rutas privadas.
@@ -9,7 +8,6 @@ import { PREVIEW_MODE } from "@/lib/mock/preview";
  * consultar la BD.
  */
 export async function updateSession(request: NextRequest) {
-  if (PREVIEW_MODE) return NextResponse.next({ request }); // PREVIEW_MODE: sin backend, no gatear
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

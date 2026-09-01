@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentVendor, isActiveVendor } from "@/lib/auth/vendor";
-import { PREVIEW_MODE } from "@/lib/mock/preview";
 import type { NuevaOfertaInput, VersionMatch } from "@/lib/db/types";
 
 const VERSION_MATCH: VersionMatch[] = [
@@ -47,8 +46,6 @@ export async function crearOferta(
     return { ok: false, error: "Declará marca y modelo del vehículo." };
   if (!(input.anio_ofertado >= 1990 && input.anio_ofertado <= 2100))
     return { ok: false, error: "Año del vehículo inválido." };
-
-  if (PREVIEW_MODE) return { ok: true }; // PREVIEW_MODE: sin backend, no persiste
 
   const supabase = await createClient();
   // El financiamiento NO se manda: el backend lo deriva del perfil del vendedor.
