@@ -86,24 +86,36 @@ export default async function AdminOverviewPage() {
                 </tr>
               </thead>
               <tbody>
+                {/* Cada celda lleva su propio link (bloque completo) para que toda la fila sea
+                    clickeable. NO usar un link con ::after absoluto: los navegadores no respetan
+                    position:relative en <tr>, las capas cubrían la tabla entera y cualquier clic
+                    llevaba a la última fila (Leads Oferta). Solo el nombre recibe foco con teclado. */}
                 {filas.map((f) => (
-                  <tr key={f.href} className="hover:bg-muted group relative border-b transition-colors last:border-0">
-                    <th scope="row" className="px-4 py-3 text-left font-normal">
-                      <Link href={f.href} className="font-semibold after:absolute after:inset-0 focus-visible:outline-offset-[-2px]">
-                        {f.nombre}
+                  <tr key={f.href} className="hover:bg-muted group border-b transition-colors last:border-0">
+                    <th scope="row" className="p-0 text-left font-normal">
+                      <Link href={f.href} className="block px-4 py-3 focus-visible:outline-offset-[-2px]">
+                        <span className="font-semibold">{f.nombre}</span>
+                        {f.nota && <Badge variant="secondary" className="ml-2 align-middle">{f.nota}</Badge>}
+                        {f.pendiente && f.pendiente.valor > 0 && (
+                          <span className="text-muted-foreground block text-micro">
+                            {formatNumero(f.pendiente.valor)} {f.pendiente.texto}
+                          </span>
+                        )}
                       </Link>
-                      {f.nota && <Badge variant="secondary" className="ml-2 align-middle">{f.nota}</Badge>}
-                      {f.pendiente && f.pendiente.valor > 0 && (
-                        <span className="text-muted-foreground block text-micro">
-                          {formatNumero(f.pendiente.valor)} {f.pendiente.texto}
-                        </span>
-                      )}
                     </th>
-                    <td className="px-3 py-3 text-right font-semibold tabular-nums">{formatNumero(f.conteo.total)}</td>
-                    <td className="hidden px-3 py-3 text-right tabular-nums sm:table-cell">{formatNumero(f.conteo.ultimos7)}</td>
-                    <td className="px-3 py-3 text-right tabular-nums">{formatNumero(f.conteo.ultimos30)}</td>
-                    <td className="text-muted-foreground px-3 py-3">
-                      <ChevronRight className="size-4 transition-transform group-hover:translate-x-[3px]" strokeWidth={1.5} aria-hidden />
+                    <td className="p-0 text-right font-semibold tabular-nums">
+                      <Link href={f.href} tabIndex={-1} aria-hidden className="block px-3 py-3">{formatNumero(f.conteo.total)}</Link>
+                    </td>
+                    <td className="hidden p-0 text-right tabular-nums sm:table-cell">
+                      <Link href={f.href} tabIndex={-1} aria-hidden className="block px-3 py-3">{formatNumero(f.conteo.ultimos7)}</Link>
+                    </td>
+                    <td className="p-0 text-right tabular-nums">
+                      <Link href={f.href} tabIndex={-1} aria-hidden className="block px-3 py-3">{formatNumero(f.conteo.ultimos30)}</Link>
+                    </td>
+                    <td className="text-muted-foreground p-0">
+                      <Link href={f.href} tabIndex={-1} aria-hidden className="block px-3 py-3">
+                        <ChevronRight className="size-4 transition-transform group-hover:translate-x-[3px]" strokeWidth={1.5} />
+                      </Link>
                     </td>
                   </tr>
                 ))}
