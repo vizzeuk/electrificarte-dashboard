@@ -3,11 +3,11 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { inter, spaceGrotesk } from "@/lib/fonts";
+import { cabinet, switzer } from "@/lib/fonts";
 
 export const metadata: Metadata = {
-  title: "Electrificarte — Dashboard",
-  description: "Dashboard interno de Electrificarte (vendedores y administración) — datos de prueba.",
+  title: "Electrificarte, panel interno",
+  description: "Panel interno de Electrificarte para administración y vendedores oficiales.",
   robots: { index: false, follow: false },
 };
 
@@ -17,13 +17,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="es"
-      className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}
-      suppressHydrationWarning
-    >
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <html lang="es-CL" className={`${cabinet.variable} ${switzer.variable}`} suppressHydrationWarning>
+      <body>
+        {/* next-themes guarda la elección en localStorage y la aplica antes de pintar
+            (script propio en el <head>), así no hay parpadeo al recargar. */}
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           {children}
           <Toaster />
         </ThemeProvider>

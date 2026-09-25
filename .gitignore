@@ -7,3 +7,6 @@
 npm-debug.log*
 next-env.d.ts
 *.tsbuildinfo
+
+# Fuentes de Fontshare (ITF FFL): no se versionan, las baja scripts/fetch-fonts.mjs
+src/app/fonts/fontshare/

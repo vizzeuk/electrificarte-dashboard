@@ -1,16 +1,26 @@
-import { Inter, Space_Grotesk } from 'next/font/google'
+import localFont from "next/font/local";
 
-// Inter — cuerpo, labels, datos (alineado con electrificarteweb).
-export const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-})
+// Fuentes de marca del sistema v1 (Fontshare, licencia ITF FFL). No se versionan: las baja
+// scripts/fetch-fonts.mjs a src/app/fonts/fontshare/ en predev/prebuild.
 
-// Space Grotesk — títulos y headlines (fuente de títulos del sitio).
-export const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['500', '600', '700'],
-  variable: '--font-space-grotesk',
-})
+// Cabinet Grotesk: títulos de 20 px o más (font-display).
+export const cabinet = localFont({
+  src: [
+    { path: "../app/fonts/fontshare/CabinetGrotesk-700.woff2", weight: "700" },
+    { path: "../app/fonts/fontshare/CabinetGrotesk-800.woff2", weight: "800" },
+  ],
+  variable: "--font-cabinet",
+  display: "swap",
+});
+
+// Switzer: todo lo demás, cifras y precios (font-sans, por defecto).
+export const switzer = localFont({
+  src: [
+    { path: "../app/fonts/fontshare/Switzer-400.woff2", weight: "400" },
+    { path: "../app/fonts/fontshare/Switzer-500.woff2", weight: "500" },
+    { path: "../app/fonts/fontshare/Switzer-600.woff2", weight: "600" },
+    { path: "../app/fonts/fontshare/Switzer-700.woff2", weight: "700" },
+  ],
+  variable: "--font-switzer",
+  display: "swap",
+});
