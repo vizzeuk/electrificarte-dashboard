@@ -1,21 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import {
-  Star,
-  Check,
-  X,
-  ChevronRight,
-  ChevronLeft,
-  ExternalLink,
-  Mail,
-  Phone,
-} from "lucide-react";
+import { Check, X, ChevronRight, ChevronLeft, ImageOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
+import { Estrellas } from "@/components/estrellas";
+import { MailLink, OutLink, WhatsAppLink } from "@/components/contact-links";
 import {
   Dialog,
   DialogContent,
@@ -25,10 +18,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { aprobarResena, rechazarResena } from "@/app/admin/resenas/actions";
-import { cn, formatFecha } from "@/lib/utils";
+import { formatFecha, SITIO } from "@/lib/utils";
+import { fuenteLabel } from "@/lib/labels";
 import type { PendingReview } from "@/lib/data/reviews-data";
-
-const SITE = "https://www.electrificarte.com";
 
 export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
   const [items, setItems] = useState(reviews);
@@ -85,7 +77,7 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
   const siguiente = useCallback(() => setIndex((i) => Math.min(i + 1, items.length - 1)), [items.length]);
   const anterior = useCallback(() => setIndex((i) => Math.max(i - 1, 0)), []);
 
-  // Atajos de teclado: A aprobar · R rechazar · ← → navegar. Se ignoran si el foco está en un
+  // Atajos de teclado: A aprobar, R rechazar, flechas para navegar. Se ignoran si el foco está en un
   // campo de texto (p. ej. el motivo de rechazo) o si hay una acción en curso.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -104,15 +96,13 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
 
   if (items.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-          <div className="flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Check className="size-6" />
-          </div>
-          <p className="font-display text-lg font-semibold">No hay reseñas con fotos por moderar</p>
-          <p className="text-muted-foreground text-sm">Las reseñas sin fotos se publican solas: las ves en la lista de abajo.</p>
-        </CardContent>
-      </Card>
+      <div className="rounded-card border">
+        <EmptyState
+          icon={Check}
+          title="No hay reseñas con fotos por moderar"
+          description="Las reseñas sin fotos se publican solas: las ves en la lista de abajo."
+        />
+      </div>
     );
   }
 
@@ -120,127 +110,104 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
 
   const nombre = [current.first_name, current.last_name].filter(Boolean).join(" ") || "Anónimo";
   const auto = [current.car_brand, current.car_model, current.car_year].filter(Boolean).join(" ");
-  const detalleAuto = [current.car_version, current.car_color].filter(Boolean).join(" · ");
+  const detalleAuto = [current.car_version, current.car_color].filter(Boolean).join(", ");
 
   return (
     <div className="flex flex-col gap-4">
       {/* Barra de navegación de la cola */}
-      <div className="flex items-center justify-between">
-        <span className="text-muted-foreground text-sm tabular-nums">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground text-small tabular-nums">
           Reseña {index + 1} de {items.length}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={anterior} disabled={index === 0} className="cursor-pointer">
-            <ChevronLeft className="size-4" /> Anterior
+            <ChevronLeft strokeWidth={1.5} /> Anterior
           </Button>
           <Button variant="outline" size="sm" onClick={siguiente} disabled={index >= items.length - 1} className="cursor-pointer">
-            Siguiente <ChevronRight className="size-4" />
+            Siguiente <ChevronRight strokeWidth={1.5} />
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col gap-6 p-6">
-          {/* Encabezado: rating + auto + fecha */}
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={cn(
-                      "size-5",
-                      i < (current.rating ?? 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30",
-                    )}
-                  />
-                ))}
-                <span className="text-muted-foreground ml-2 text-sm tabular-nums">{current.rating ?? "—"}/5</span>
-              </div>
-              <div className="font-display text-xl font-semibold">{auto || "Auto sin identificar"}</div>
-              {detalleAuto && <div className="text-muted-foreground text-sm">{detalleAuto}</div>}
+      <article className="bg-card flex flex-col gap-6 rounded-card border p-5 sm:p-6">
+        {/* Encabezado: nota, auto y fecha */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="grid gap-2">
+            <div className="flex items-center gap-2">
+              <Estrellas n={current.rating} className="[&_svg]:size-5" />
+              <span className="text-muted-foreground text-small tabular-nums">{current.rating ?? 0} de 5</span>
             </div>
-            <div className="flex flex-col items-end gap-1 text-sm">
-              <span className="text-muted-foreground" suppressHydrationWarning>
-                {formatFecha(current.created_at)}
-                {now && current.created_at ? ` · ${hace(current.created_at, now)}` : ""}
-              </span>
-              {current.source && <Badge variant="outline">Origen: {current.source}</Badge>}
-              {current.car_slug && (
-                <a
-                  href={`${SITE}/auto/${current.car_slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary inline-flex items-center gap-1 hover:underline"
-                >
-                  Ver el auto <ExternalLink className="size-3.5" />
-                </a>
-              )}
-            </div>
+            <h3 className="font-display text-h3 font-bold">{auto || "Auto sin identificar"}</h3>
+            {detalleAuto && <p className="text-muted-foreground text-small">{detalleAuto}</p>}
           </div>
-
-          {/* Texto de la reseña — completo, sin truncar */}
-          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
-            {current.body || <span className="text-muted-foreground italic">Sin texto</span>}
-          </p>
-
-          {/* Fotos EN GRANDE */}
-          {current.fotos.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {current.fotos.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt={`Foto ${i + 1} de la reseña`}
-                    className="bg-muted max-h-[70vh] w-full rounded-xl border object-contain"
-                  />
-                </a>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">Sin fotos.</p>
-          )}
-
-          {/* Autor (PII — solo admin) */}
-          <div className="bg-muted/40 grid gap-2 rounded-xl border p-4 sm:grid-cols-3">
-            <div className="grid gap-0.5">
-              <span className="text-muted-foreground text-xs">Autor</span>
-              <span className="font-medium">{nombre}</span>
-            </div>
-            {current.email && (
-              <a href={`mailto:${current.email}`} className="grid gap-0.5 hover:underline">
-                <span className="text-muted-foreground inline-flex items-center gap-1 text-xs"><Mail className="size-3" /> Email</span>
-                <span className="font-medium">{current.email}</span>
-              </a>
-            )}
-            {current.phone && (
-              <a href={`tel:${current.phone}`} className="grid gap-0.5 hover:underline">
-                <span className="text-muted-foreground inline-flex items-center gap-1 text-xs"><Phone className="size-3" /> Teléfono</span>
-                <span className="font-medium">{current.phone}</span>
-              </a>
-            )}
-          </div>
-
-          {/* Acciones */}
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              onClick={aprobar}
-              disabled={pending}
-              className="cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700"
-            >
-              <Check className="size-4" /> Aprobar
-            </Button>
-            <Button variant="outline" onClick={() => setRejectOpen(true)} disabled={pending} className="cursor-pointer">
-              <X className="size-4" /> Rechazar
-            </Button>
-            <span className="text-muted-foreground ml-auto hidden text-xs sm:block">
-              Atajos: <kbd className="rounded border px-1">A</kbd> aprobar ·{" "}
-              <kbd className="rounded border px-1">R</kbd> rechazar ·{" "}
-              <kbd className="rounded border px-1">→</kbd> siguiente
+          <div className="flex flex-col items-start gap-2 text-small sm:items-end">
+            <span className="text-muted-foreground tabular-nums" suppressHydrationWarning>
+              {formatFecha(current.created_at)}
+              {now && current.created_at ? `, ${hace(current.created_at, now)}` : ""}
             </span>
+            {current.source && <Badge variant="outline">Desde {fuenteLabel(current.source).toLocaleLowerCase("es-CL")}</Badge>}
+            {current.car_slug && <OutLink href={`${SITIO}/auto/${current.car_slug}`}>Ver el auto en el sitio</OutLink>}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Texto de la reseña, completo */}
+        <p className="max-w-prose text-base leading-relaxed whitespace-pre-wrap">
+          {current.body || <span className="text-muted-foreground">Sin texto</span>}
+        </p>
+
+        {/* Fotos en grande */}
+        {current.fotos.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {current.fotos.map((url, i) => (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-card">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`Foto ${i + 1} de la reseña`}
+                  className="bg-muted max-h-[70vh] w-full rounded-card border object-contain"
+                />
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground inline-flex items-center gap-2 text-small">
+            <ImageOff className="size-4" strokeWidth={1.5} aria-hidden /> Esta reseña no trae fotos.
+          </p>
+        )}
+
+        {/* Autor (datos personales, solo admin) */}
+        <dl className="bg-muted grid gap-4 rounded-card p-4 sm:grid-cols-3">
+          <div className="grid gap-1">
+            <dt className="text-muted-foreground text-label">Autor</dt>
+            <dd className="text-small font-semibold">{nombre}</dd>
+          </div>
+          {current.email && (
+            <div className="grid min-w-0 gap-1">
+              <dt className="text-muted-foreground text-label">Email</dt>
+              <dd className="min-w-0 text-small"><MailLink email={current.email} /></dd>
+            </div>
+          )}
+          {current.phone && (
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground text-label">Teléfono</dt>
+              <dd className="text-small"><WhatsAppLink phone={current.phone} /></dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Acciones */}
+        <div className="flex flex-wrap items-center gap-3 border-t pt-5">
+          <Button onClick={aprobar} disabled={pending} className="cursor-pointer">
+            <Check strokeWidth={1.5} /> Aprobar y publicar
+          </Button>
+          <Button variant="outline" onClick={() => setRejectOpen(true)} disabled={pending} className="cursor-pointer">
+            <X strokeWidth={1.5} /> Rechazar
+          </Button>
+          <span className="text-muted-foreground ml-auto hidden text-micro lg:block">
+            Atajos: <Kbd>A</Kbd> aprobar, <Kbd>R</Kbd> rechazar, <Kbd>←</Kbd> <Kbd>→</Kbd> navegar
+          </span>
+        </div>
+      </article>
 
       {/* Diálogo de rechazo */}
       <Dialog open={rejectOpen} onOpenChange={(o) => { setRejectOpen(o); if (!o) setMotivo(""); }}>
@@ -262,11 +229,7 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
             <Button variant="outline" onClick={() => setRejectOpen(false)} disabled={pending} className="cursor-pointer">
               Cancelar
             </Button>
-            <Button
-              onClick={confirmarRechazo}
-              disabled={pending}
-              className="cursor-pointer bg-red-600 text-white hover:bg-red-700"
-            >
+            <Button variant="destructive" onClick={confirmarRechazo} disabled={pending} className="cursor-pointer">
               {pending ? "Rechazando…" : "Confirmar rechazo"}
             </Button>
           </DialogFooter>
@@ -274,6 +237,10 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
       </Dialog>
     </div>
   );
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return <kbd className="bg-background text-foreground rounded-chip border px-1.5 py-0.5 font-sans text-micro">{children}</kbd>;
 }
 
 function hace(iso: string, now: number): string {

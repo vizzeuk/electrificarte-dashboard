@@ -1,7 +1,9 @@
-import { PageHeader } from "@/components/page-header";
+import { PageHeader, SectionTitle } from "@/components/page-header";
+import { Kpi, Kpis } from "@/components/kpi";
 import { ReviewsModeration } from "@/components/reviews-moderation";
 import { ReviewsTable } from "@/components/reviews-table";
 import { getAllReviews, getPendingReviews } from "@/lib/data/reviews-data";
+import { formatNumero } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -11,25 +13,46 @@ export const dynamic = "force-dynamic";
  */
 export default async function ResenasPage() {
   const [pendientes, todas] = await Promise.all([getPendingReviews(), getAllReviews()]);
+  const now = Date.now();
+  const publicadas = todas.filter((r) => r.status === "aprobada").length;
+  const rechazadas = todas.filter((r) => r.status === "rechazada").length;
+  const notas = todas.map((r) => r.rating).filter((n): n is number => n != null && n > 0);
+  const promedio = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null;
 
   return (
-    <div className="flex flex-col gap-8 px-4 lg:px-6">
+    <>
       <PageHeader
         title="Reseñas"
-        subtitle={
-          pendientes.length === 0
-            ? "No hay reseñas con fotos por moderar. Las que llegan sin fotos se publican solas."
-            : `${pendientes.length} reseña${pendientes.length === 1 ? "" : "s"} con fotos por moderar. Las que llegan sin fotos se publican solas.`
-        }
+        subtitle="Las reseñas con fotos se revisan antes de publicarse. Las que llegan sin fotos se publican solas."
       />
+
+      <Kpis>
+        <Kpi value={formatNumero(pendientes.length)} label="Por moderar" />
+        <Kpi value={formatNumero(publicadas)} label="Publicadas" />
+        <Kpi value={formatNumero(rechazadas)} label="Rechazadas" />
+        <Kpi
+          value={promedio == null ? "Sin notas" : promedio.toLocaleString("es-CL", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+          label="Nota promedio"
+          hint={`De las últimas ${formatNumero(todas.length)} reseñas`}
+        />
+      </Kpis>
+
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl font-semibold">Por moderar</h2>
+        <SectionTitle
+          title="Por moderar"
+          description={
+            pendientes.length === 0
+              ? "Nada pendiente por ahora."
+              : `${formatNumero(pendientes.length)} reseña${pendientes.length === 1 ? "" : "s"} esperando revisión, de la más antigua a la más nueva.`
+          }
+        />
         <ReviewsModeration reviews={pendientes} />
       </section>
+
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl font-semibold">Todas las reseñas</h2>
-        <ReviewsTable reviews={todas} />
+        <SectionTitle title="Todas las reseñas" description="Las más recientes de cualquier estado." />
+        <ReviewsTable reviews={todas} now={now} />
       </section>
-    </div>
+    </>
   );
 }

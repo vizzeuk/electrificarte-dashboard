@@ -1,72 +1,141 @@
-import { ExternalLink, Star } from "lucide-react";
+"use client";
+
+import { Star } from "lucide-react";
+import { DataTable, DetailList, Vacio, type Column, type FilterDef } from "@/components/data-table";
+import { OutLink } from "@/components/contact-links";
+import { Estrellas } from "@/components/estrellas";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatFecha } from "@/lib/utils";
+import { formatFecha, formatFechaHora, formatNumero, SITIO } from "@/lib/utils";
 import type { ReviewRow } from "@/lib/data/reviews-data";
 
-const SITE = "https://www.electrificarte.com";
+type EstadoKey = "pendiente" | "rechazada" | "auto" | "aprobada";
 
-function Estado({ r }: { r: ReviewRow }) {
-  if (r.status === "pendiente") return <Badge variant="outline">Por moderar</Badge>;
-  if (r.status === "rechazada") return <Badge variant="destructive">Rechazada</Badge>;
-  if (r.auto) return <Badge variant="secondary">Publicada sola (sin fotos)</Badge>;
-  return <Badge>Aprobada</Badge>;
+function estadoDe(r: ReviewRow): EstadoKey {
+  if (r.status === "pendiente") return "pendiente";
+  if (r.status === "rechazada") return "rechazada";
+  if (r.auto) return "auto";
+  return "aprobada";
+}
+
+const ESTADO: Record<EstadoKey, { label: string; variant: "outline" | "destructive" | "secondary" | "soft" }> = {
+  pendiente: { label: "Por moderar", variant: "outline" },
+  rechazada: { label: "Rechazada", variant: "destructive" },
+  auto: { label: "Publicada sola", variant: "secondary" },
+  aprobada: { label: "Aprobada", variant: "soft" },
+};
+
+const autor = (r: ReviewRow) => [r.first_name, r.last_name?.[0] ? `${r.last_name[0]}.` : ""].filter(Boolean).join(" ");
+const auto = (r: ReviewRow) => [r.car_brand, r.car_model].filter(Boolean).join(" ") || r.car_slug || null;
+
+function Auto({ r }: { r: ReviewRow }) {
+  const nombre = auto(r);
+  if (!nombre) return <Vacio>Sin auto</Vacio>;
+  return r.car_slug ? <OutLink href={`${SITIO}/auto/${r.car_slug}`}>{nombre}</OutLink> : <span>{nombre}</span>;
 }
 
 /**
  * Lista de solo lectura con todas las reseñas. Sin acciones: solo las reseñas con fotos se
  * aprueban o rechazan, y eso se hace en la cola de arriba (ReviewsModeration).
  */
-export function ReviewsTable({ reviews }: { reviews: ReviewRow[] }) {
-  if (reviews.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">Todavía no llegan reseñas.</CardContent>
-      </Card>
-    );
-  }
+export function ReviewsTable({ reviews, now }: { reviews: ReviewRow[]; now: number }) {
+  const columns: Column<ReviewRow>[] = [
+    {
+      id: "auto",
+      header: "Auto",
+      primary: true,
+      sortValue: (r) => auto(r)?.toLowerCase() ?? null,
+      csv: (r) => auto(r),
+      cell: (r) => <Auto r={r} />,
+    },
+    {
+      id: "nota",
+      header: "Nota",
+      sortValue: (r) => r.rating,
+      csv: (r) => r.rating,
+      cell: (r) => <Estrellas n={r.rating} />,
+    },
+    { id: "autor", header: "Autor", sortValue: (r) => autor(r).toLowerCase() || null, csv: (r) => autor(r), cell: (r) => autor(r) || <Vacio>Anónimo</Vacio> },
+    {
+      id: "texto",
+      header: "Reseña",
+      className: "w-full max-w-0",
+      csv: (r) => r.body,
+      cell: (r) => <p className="truncate" title={r.body ?? ""}>{r.body || <Vacio>Sin texto</Vacio>}</p>,
+    },
+    { id: "fotos", header: "Fotos", sortValue: (r) => r.fotos, csv: (r) => r.fotos, cell: (r) => <span className="tabular-nums">{formatNumero(r.fotos)}</span> },
+    {
+      id: "estado",
+      header: "Estado",
+      sortValue: (r) => ESTADO[estadoDe(r)].label,
+      csv: (r) => ESTADO[estadoDe(r)].label,
+      cell: (r) => <Badge variant={ESTADO[estadoDe(r)].variant}>{ESTADO[estadoDe(r)].label}</Badge>,
+    },
+    {
+      id: "fecha",
+      header: "Fecha",
+      sortValue: (r) => (r.created_at ? new Date(r.created_at).getTime() : null),
+      csv: (r) => formatFechaHora(r.created_at),
+      cell: (r) => <span className="tabular-nums">{formatFecha(r.created_at)}</span>,
+    },
+  ];
+
+  const filters: FilterDef<ReviewRow>[] = [
+    {
+      id: "estado",
+      label: "Estado",
+      allLabel: "Todos los estados",
+      options: (Object.keys(ESTADO) as EstadoKey[])
+        .filter((k) => reviews.some((r) => estadoDe(r) === k))
+        .map((k) => ({ value: k, label: ESTADO[k].label })),
+      get: (r) => estadoDe(r),
+    },
+    {
+      id: "fotos",
+      label: "Fotos",
+      allLabel: "Con y sin fotos",
+      options: [
+        { value: "si", label: "Con fotos" },
+        { value: "no", label: "Sin fotos" },
+      ],
+      get: (r) => (r.fotos > 0 ? "si" : "no"),
+    },
+  ];
+
   return (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Auto</TableHead>
-              <TableHead>Nota</TableHead>
-              <TableHead>Autor</TableHead>
-              <TableHead className="w-[40%]">Reseña</TableHead>
-              <TableHead>Fotos</TableHead>
-              <TableHead>Estado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reviews.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="whitespace-nowrap tabular-nums">{formatFecha(r.created_at)}</TableCell>
-                <TableCell>
-                  {r.car_slug ? (
-                    <a href={`${SITE}/auto/${r.car_slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">
-                      {[r.car_brand, r.car_model].filter(Boolean).join(" ") || r.car_slug}
-                      <ExternalLink className="size-3.5" strokeWidth={1.5} />
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">Sin auto</span>
-                  )}
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">
-                  <span className="inline-flex items-center gap-1"><Star className="size-3.5" strokeWidth={1.5} />{r.rating ?? "—"}</span>
-                </TableCell>
-                <TableCell className="whitespace-nowrap">{[r.first_name, r.last_name?.[0] ? `${r.last_name[0]}.` : ""].filter(Boolean).join(" ")}</TableCell>
-                <TableCell className="max-w-0"><p className="truncate" title={r.body ?? ""}>{r.body}</p></TableCell>
-                <TableCell className="tabular-nums">{r.fotos}</TableCell>
-                <TableCell><Estado r={r} /></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <DataTable
+      rows={reviews}
+      columns={columns}
+      getRowId={(r) => r.id}
+      searchText={(r) => [auto(r), r.first_name, r.last_name, r.body].filter(Boolean).join(" ")}
+      searchPlaceholder="Buscar por auto, autor o texto"
+      filters={filters}
+      dateOf={(r) => r.created_at}
+      now={now}
+      defaultSort={{ id: "fecha", desc: true }}
+      csvName="resenas"
+      emptyIcon={Star}
+      emptyTitle="Todavía no llegan reseñas"
+      emptyDescription="Las reseñas que dejan las personas en las fichas de autos aparecen acá."
+      detailTitle={(r) => auto(r) ?? "Reseña"}
+      detail={(r) => (
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-2">
+            <Estrellas n={r.rating} className="[&_svg]:size-5" />
+            <span className="text-muted-foreground text-small">{r.rating ?? 0} de 5</span>
+          </div>
+          <p className="text-base leading-relaxed whitespace-pre-wrap">{r.body || <Vacio>Sin texto</Vacio>}</p>
+          <DetailList
+            items={[
+              { label: "Autor", value: autor(r) || <Vacio>Anónimo</Vacio> },
+              { label: "Fotos", value: formatNumero(r.fotos) },
+              { label: "Estado", value: <Badge variant={ESTADO[estadoDe(r)].variant}>{ESTADO[estadoDe(r)].label}</Badge> },
+              { label: "Fecha", value: formatFechaHora(r.created_at) },
+              { label: "Moderada por", value: r.moderated_by ?? <Vacio>{r.auto ? "Publicada sin moderar" : "Nadie todavía"}</Vacio>, full: true },
+              { label: "Auto", value: <Auto r={r} />, full: true },
+            ]}
+          />
+        </div>
+      )}
+    />
   );
 }
