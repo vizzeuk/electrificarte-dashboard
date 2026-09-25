@@ -22,7 +22,7 @@ Corre en el puerto **3001** (`npm run dev`) para no chocar con electrificarteweb
 ## Estructura
 
 ```
-src/app/admin/      Resumen · Analítica · Leads Asesoría · Leads Oferta · Vendedores
+src/app/admin/      Resumen · Analítica · Leads Asesoría · Leads Oferta · Reseñas (moderación) · Vendedores
 src/app/vendedor/   Resumen · Analítica · Mis ofertas · Leads disponibles · Mi cuenta (datos, Ley 21.719)
 src/components/     Componentes propios (kpi-card, top-list, site-analytics…)
 src/components/ui/  shadcn — no editar a mano, se regeneran
