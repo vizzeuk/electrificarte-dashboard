@@ -1,15 +1,3 @@
-export type LeadEstadoAsesoria = "pendiente" | "pagado" | "en_conversacion" | "cerrado";
-
-export interface LeadAsesoria {
-  id: string;
-  nombre: string;
-  email: string;
-  telefono: string;
-  estado: LeadEstadoAsesoria;
-  fecha: string;
-  interes?: string;
-}
-
 export interface TrafficPoint {
   fecha: string;
   visitas: number;

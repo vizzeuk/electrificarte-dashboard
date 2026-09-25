@@ -1,28 +1,40 @@
-import { Sparkles, MessageCircle, CheckCircle2, Clock } from "lucide-react";
-import { KpiCard } from "@/components/kpi-card";
-import { LeadsAsesoriaTable } from "@/components/leads-asesoria-table";
-import { leadsAsesoria } from "@/lib/mock/leads-asesoria";
+import { PageHeader } from "@/components/page-header";
+import { Kpi, Kpis } from "@/components/kpi";
+import { AsesoriasTable } from "@/components/admin/asesorias-table";
+import { ASESORIA_DIAS, getAsesorias } from "@/lib/data/admin-data";
+import { formatNumero } from "@/lib/utils";
 
-export default function LeadsAsesoriaPage() {
-  const pendientes = leadsAsesoria.filter((l) => l.estado === "pendiente").length;
-  const enConversacion = leadsAsesoria.filter((l) => l.estado === "en_conversacion").length;
-  const cerrados = leadsAsesoria.filter((l) => l.estado === "cerrado").length;
+export const dynamic = "force-dynamic";
+
+export default async function AsesoriasPage() {
+  const { rows, fuente } = await getAsesorias();
+  const now = Date.now();
+  const activas = rows.filter((r) => r.estado === "activa");
+  const vencenPronto = activas.filter((r) => r.dias_restantes <= 2).length;
+  const pagadas = rows.filter((r) => r.estado === "activa" || r.estado === "vencida").length;
+  const pendientes = rows.filter((r) => r.estado === "pendiente de pago").length;
 
   return (
-    <div className="flex flex-col gap-6 px-4 lg:px-6">
-      <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Leads Asesoría IA — $4.990</h1>
-        <p className="text-muted-foreground">Personas que contrataron la asesoría por WhatsApp con Francisco IA.</p>
-      </div>
+    <>
+      <PageHeader
+        title="Asesorías"
+        subtitle={`Personas que contrataron la asesoría por WhatsApp ($4.990). Dura ${ASESORIA_DIAS} días desde el pago.`}
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total" value={String(leadsAsesoria.length)} icon={Sparkles} accent="primary" />
-        <KpiCard label="Sin iniciar" value={String(pendientes)} icon={Clock} accent="amber" />
-        <KpiCard label="En conversación" value={String(enConversacion)} icon={MessageCircle} accent="muted" />
-        <KpiCard label="Cerrados" value={String(cerrados)} icon={CheckCircle2} accent="green" hint="Avanzaron o cerraron" />
-      </div>
+      <Kpis>
+        <Kpi value={formatNumero(activas.length)} label="Activas hoy" hint={vencenPronto > 0 ? `${formatNumero(vencenPronto)} vencen en 2 días o menos` : "Ninguna por vencer"} />
+        <Kpi value={formatNumero(pagadas)} label="Pagadas en total" hint="Activas y vencidas" />
+        <Kpi value={formatNumero(pendientes)} label="Pago pendiente" hint="Llenaron el formulario y no pagaron" />
+        <Kpi value={formatNumero(rows.length)} label="Formularios recibidos" />
+      </Kpis>
 
-      <LeadsAsesoriaTable leads={leadsAsesoria} />
-    </div>
+      <AsesoriasTable rows={rows} now={now} />
+
+      <p className="text-muted-foreground text-small">
+        {fuente === "vista"
+          ? "Estado y días restantes según la vista asesorias_estado de Supabase."
+          : `Estado y días restantes calculados con la misma regla del bot: ${ASESORIA_DIAS} días desde el pago (o desde el formulario si falta la fecha de pago).`}
+      </p>
+    </>
   );
 }

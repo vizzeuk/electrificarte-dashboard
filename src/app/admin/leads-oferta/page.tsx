@@ -1,30 +1,35 @@
-import { ShoppingBag, Car, MapPin } from "lucide-react";
-import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
-import { AdminLeadsTable } from "@/components/admin-leads-table";
+import { Kpi, Kpis } from "@/components/kpi";
+import { LeadsOfertaTable } from "@/components/admin/leads-oferta-table";
+import { Badge } from "@/components/ui/badge";
 import { getLeadsOferta } from "@/lib/data/admin-data";
+import { formatNumero } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadsOfertaPage() {
   const leads = await getLeadsOferta();
-  const conModelo = leads.filter((l) => !!l.target_model).length;
-  const regiones = new Set(leads.map((l) => l.region).filter(Boolean)).size;
+  const now = Date.now();
+  const pagados = leads.filter((l) => (l.status ?? "").toLowerCase() === "pagado").length;
+  const prueba = leads.filter((l) => (l.origen ?? "").toLowerCase().includes("test")).length;
+  const conOfertas = leads.filter((l) => l.ofertas > 0).length;
 
   return (
-    <div className="flex flex-col gap-8 px-4 lg:px-6">
+    <>
       <PageHeader
-        title="Leads Oferta Exclusiva — $19.990"
-        subtitle="Personas que ya decidieron su auto y esperan la mejor oferta de la red de vendedores."
+        chips={<Badge variant="default">En pausa</Badge>}
+        title="Leads Oferta Exclusiva"
+        subtitle="Producto en pausa desde septiembre de 2026: no entran leads nuevos. Se muestran los registros históricos solo para consulta."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <KpiCard label="Leads pagados" value={String(leads.length)} icon={ShoppingBag} accent="primary" />
-        <KpiCard label="Con modelo definido" value={String(conModelo)} icon={Car} accent="green" />
-        <KpiCard label="Regiones" value={String(regiones)} icon={MapPin} accent="muted" hint="Cobertura" />
-      </div>
+      <Kpis>
+        <Kpi value={formatNumero(leads.length)} label="Leads registrados" />
+        <Kpi value={formatNumero(pagados)} label="Pagados" />
+        <Kpi value={formatNumero(conOfertas)} label="Con ofertas de vendedores" />
+        <Kpi value={formatNumero(prueba)} label="De prueba" hint="Origen marcado como test" />
+      </Kpis>
 
-      <AdminLeadsTable leads={leads} />
-    </div>
+      <LeadsOfertaTable rows={leads} now={now} />
+    </>
   );
 }

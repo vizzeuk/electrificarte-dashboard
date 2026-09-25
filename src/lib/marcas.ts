@@ -20,3 +20,12 @@ export function parseMarcasSeleccionadas(marcas: string | null | undefined): str
   // Devuelve con la grafía canónica del catálogo.
   return MARCAS.filter((m) => pedidas.has(norm(m)));
 }
+
+/** Parsea el texto libre de marcas sin filtrar contra el catálogo ("BYD, Tesla, MG"). */
+export function parseMarcas(marcas: string | null | undefined): string[] {
+  if (!marcas) return [];
+  return marcas
+    .split(/[,;/]+/)
+    .map((m) => m.trim())
+    .filter(Boolean);
+}
