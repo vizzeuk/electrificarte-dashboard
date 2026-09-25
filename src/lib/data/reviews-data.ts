@@ -71,3 +71,54 @@ export async function getPendingReviews(): Promise<PendingReview[]> {
     }),
   );
 }
+
+/** Fila de la lista completa (sin PII sensible más allá del nombre: la vista es admin-only). */
+export interface ReviewRow {
+  id: string;
+  created_at: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  rating: number | null;
+  body: string | null;
+  car_slug: string | null;
+  car_brand: string | null;
+  car_model: string | null;
+  status: "pendiente" | "aprobada" | "rechazada" | string;
+  fotos: number;
+  /** true = aprobada sin pasar por moderación (reseña sin fotos, regla de sep-2026). */
+  auto: boolean;
+  moderated_by: string | null;
+}
+
+/**
+ * TODAS las reseñas recientes, cualquier estado, más nuevas primero.
+ *
+ * Regla (sep-2026, Vicente + Matías): solo se moderan las reseñas CON fotos. Las que llegan solo
+ * con texto las publica n8n directamente (status 'aprobada', sin moderated_at). Esta lista las
+ * muestra todas para que Francisco vea lo que entra; aprobar/rechazar sigue siendo solo para la
+ * cola de pendientes (getPendingReviews).
+ */
+export async function getAllReviews(limit = 100): Promise<ReviewRow[]> {
+  if (!(await getAdminEmail())) return [];
+
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from("reviews")
+    .select("id, created_at, first_name, last_name, rating, body, car_slug, car_brand, car_model, status, photos, moderated_at, moderated_by")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("getAllReviews:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((r) => {
+    const photos: string[] = r.photos ?? [];
+    // Las fotos se guardan en pares (-card / -full): una foto = 2 archivos.
+    const fotos = Math.floor(photos.length / 2) || photos.length;
+    const { photos: _p, moderated_at, ...rest } = r;
+    void _p;
+    return { ...rest, fotos, auto: r.status === "aprobada" && !moderated_at && photos.length === 0 } as ReviewRow;
+  });
+}

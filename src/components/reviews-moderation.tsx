@@ -109,8 +109,8 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
           <div className="flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <Check className="size-6" />
           </div>
-          <p className="font-display text-lg font-semibold">No hay reseñas pendientes</p>
-          <p className="text-muted-foreground text-sm">Todo moderado. Volvé más tarde.</p>
+          <p className="font-display text-lg font-semibold">No hay reseñas con fotos por moderar</p>
+          <p className="text-muted-foreground text-sm">Las reseñas sin fotos se publican solas: las ves en la lista de abajo.</p>
         </CardContent>
       </Card>
     );
