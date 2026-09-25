@@ -1,19 +1,22 @@
 "use client";
 
-import { LayoutDashboard, Users, Handshake, BarChart3, UserCog } from "lucide-react";
+import { BarChart3, Handshake, LayoutDashboard, UserCog, Users } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import type { NavGroup } from "@/components/app-sidebar";
 
 const navGroups: NavGroup[] = [
   {
-    label: "Panel Vendedor",
+    label: "Panel de vendedor",
     items: [
       { title: "Resumen", url: "/vendedor", icon: LayoutDashboard },
-      { title: "Analítica del sitio", url: "/vendedor/analitica", icon: BarChart3 },
-      { title: "Mis ofertas", url: "/vendedor/leads-activos", icon: Users },
       { title: "Leads disponibles", url: "/vendedor/leads-disponibles", icon: Handshake },
-      { title: "Mi cuenta", url: "/vendedor/mi-cuenta", icon: UserCog },
+      { title: "Mis ofertas", url: "/vendedor/leads-activos", icon: Users },
+      { title: "Analítica del sitio", url: "/vendedor/analitica", icon: BarChart3 },
     ],
+  },
+  {
+    label: "Cuenta",
+    items: [{ title: "Mi cuenta", url: "/vendedor/mi-cuenta", icon: UserCog }],
   },
 ];
 
@@ -25,13 +28,7 @@ export function VendedorShell({
   children: React.ReactNode;
 }) {
   return (
-    <DashboardShell
-      navGroups={navGroups}
-      user={user}
-      homeUrl="/vendedor"
-      sidebarTitle="Panel Vendedor"
-      pageTitle="Panel Vendedor"
-    >
+    <DashboardShell navGroups={navGroups} user={user} homeUrl="/vendedor" panelLabel="Vendedor oficial">
       {children}
     </DashboardShell>
   );

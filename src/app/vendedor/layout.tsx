@@ -6,13 +6,11 @@ import { VendedorShell } from "./vendedor-shell";
 
 function BlockScreen({ title, body }: { title: string; body: string }) {
   return (
-    <main className="bg-muted/30 flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black">
-        <Logo size={26} />
-      </div>
+    <main className="bg-muted flex min-h-screen flex-col items-center justify-center gap-6 px-5 text-center">
+      <Logo className="h-5" />
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
-        <p className="text-muted-foreground mt-1 max-w-sm">{body}</p>
+        <h1 className="font-display text-h3 font-bold">{title}</h1>
+        <p className="text-muted-foreground mt-2 max-w-sm">{body}</p>
       </div>
       <form action="/auth/signout" method="post">
         <Button type="submit" variant="outline" className="cursor-pointer">
@@ -38,7 +36,7 @@ export default async function VendedorLayout({
     return (
       <BlockScreen
         title="Correo no registrado"
-        body="No encontramos una cuenta de vendedor oficial con este correo. Si creés que es un error, contactá a Electrificarte."
+        body="No encontramos una cuenta de vendedor oficial con este correo. Si crees que es un error, escríbenos a contacto@electrificarte.com."
       />
     );
   }
@@ -48,7 +46,7 @@ export default async function VendedorLayout({
     return (
       <BlockScreen
         title="Cuenta no activa"
-        body="Tu cuenta de vendedor oficial todavía no está activa. Una vez confirmada tu suscripción vas a poder entrar al panel."
+        body="Tu cuenta de vendedor oficial todavía no está activa. Cuando se confirme tu suscripción podrás entrar al panel."
       />
     );
   }

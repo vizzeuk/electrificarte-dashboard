@@ -1,100 +1,60 @@
 "use client"
 
-import { ChevronRight, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+import type { NavItem } from "@/components/app-sidebar"
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
-export function NavMain({
-  label,
-  items,
-}: {
-  label: string
-  items: {
-    title: string
-    url: string
-    icon?: LucideIcon
-    isActive?: boolean
-    items?: {
-      title: string
-      url: string
-      isActive?: boolean
-    }[]
-  }[]
-}) {
-  const pathname = usePathname()
+/** Un ítem está activo en su ruta exacta o en cualquier subruta (salvo el inicio del panel). */
+export function isActivePath(pathname: string, url: string): boolean {
+  if (pathname === url) return true
+  const depth = url.split("/").filter(Boolean).length
+  return depth > 1 && pathname.startsWith(`${url}/`)
+}
 
-  // Check if any subitem is active to determine if parent should be open
-  const shouldBeOpen = (item: typeof items[0]) => {
-    if (item.isActive) return true
-    return item.items?.some(subItem => pathname === subItem.url) || false
-  }
+export function NavMain({ label, items }: { label: string; items: NavItem[] }) {
+  const pathname = usePathname()
+  const { isMobile, setOpenMobile } = useSidebar()
 
   return (
     <SidebarGroup className="px-3 py-2">
-      <SidebarGroupLabel className="mb-1 px-2 text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground/70">{label}</SidebarGroupLabel>
-      <SidebarMenu className="gap-1.5">
-        {items.map((item) => (
-          <Collapsible
-            key={item.title}
-            asChild
-            defaultOpen={shouldBeOpen(item)}
-            className="group/collapsible"
-          >
-            <SidebarMenuItem>
-              {item.items?.length ? (
-                <>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title} className="cursor-pointer">
-                      {item.icon && <item.icon />}
-                      <span>{item.title}</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {item.items?.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton asChild className="cursor-pointer" isActive={pathname === subItem.url}>
-                            <Link
-                              href={subItem.url}
-                              target={(item.title === "Auth Pages" || item.title === "Errors") ? "_blank" : undefined}
-                              rel={(item.title === "Auth Pages" || item.title === "Errors") ? "noopener noreferrer" : undefined}
-                            >
-                              <span>{subItem.title}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </>
-              ) : (
-                <SidebarMenuButton asChild tooltip={item.title} className="h-9 gap-3 cursor-pointer" isActive={pathname === item.url}>
-                  <Link href={item.url}>
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              )}
+      <SidebarGroupLabel className="px-2">{label}</SidebarGroupLabel>
+      <SidebarMenu className="gap-0.5">
+        {items.map((item) => {
+          const active = isActivePath(pathname, item.url)
+          return (
+            <SidebarMenuItem key={item.url}>
+              <SidebarMenuButton
+                asChild
+                tooltip={item.title}
+                isActive={active}
+                className="h-10 gap-3 border border-transparent text-small data-[active=true]:border-sidebar-border data-[active=true]:font-semibold [&>svg]:size-[18px]"
+              >
+                <Link
+                  href={item.url}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => isMobile && setOpenMobile(false)}
+                >
+                  {item.icon && <item.icon strokeWidth={1.5} />}
+                  <span>{item.title}</span>
+                  {item.note && (
+                    <span className="text-muted-foreground ml-auto text-micro font-normal group-data-[collapsible=icon]:hidden">
+                      {item.note}
+                    </span>
+                  )}
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
-          </Collapsible>
-        ))}
+          )
+        })}
       </SidebarMenu>
     </SidebarGroup>
   )

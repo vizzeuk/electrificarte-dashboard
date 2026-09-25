@@ -17,55 +17,46 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+export interface NavItem {
+  title: string
+  url: string
+  icon?: LucideIcon
+  /** Texto corto a la derecha del ítem (p. ej. "En pausa"). */
+  note?: string
+}
+
 export interface NavGroup {
   label: string
-  items: {
-    title: string
-    url: string
-    icon?: LucideIcon
-  }[]
+  items: NavItem[]
 }
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   navGroups: NavGroup[]
   user: { name: string; role: string; email?: string }
   homeUrl: string
-  title: string
 }
 
-export function AppSidebar({ navGroups, user, homeUrl, title, ...props }: AppSidebarProps) {
+export function AppSidebar({ navGroups, user, homeUrl, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="border-b border-sidebar-border/60 p-3">
+      <SidebarHeader className="h-(--header-height) justify-center border-b border-sidebar-border px-3 py-0">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="gap-2.5 hover:bg-transparent active:bg-transparent">
-              <Link href={homeUrl}>
-                {/* Colapsado: isotipo. */}
-                <div className="hidden aspect-square size-8 shrink-0 items-center justify-center rounded-xl bg-black shadow-sm group-data-[collapsible=icon]:flex">
-                  <Logo size={18} />
-                </div>
-                {/* Expandido: solo el logo real, usando todo el alto de la fila. */}
-                <div className="flex flex-1 items-center group-data-[collapsible=icon]:hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/logo-electrificarte.webp"
-                    alt="Electrificarte"
-                    className="h-8 w-auto object-contain object-left brightness-0 dark:brightness-0 dark:invert"
-                  />
-                  <span className="sr-only">{title}</span>
-                </div>
+            <SidebarMenuButton asChild className="h-10 hover:bg-transparent active:bg-transparent">
+              <Link href={homeUrl} aria-label="Electrificarte, ir al inicio del panel">
+                <Logo variant="mark" className="hidden shrink-0 group-data-[collapsible=icon]:block" />
+                <Logo className="group-data-[collapsible=icon]:hidden" />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="gap-1 py-2">
+      <SidebarContent className="gap-0 py-3">
         {navGroups.map((group) => (
           <NavMain key={group.label} label={group.label} items={group.items} />
         ))}
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border/60 p-3">
+      <SidebarFooter className="border-t border-sidebar-border p-3">
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

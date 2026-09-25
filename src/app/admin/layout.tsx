@@ -7,6 +7,14 @@ import { AdminShell } from "./admin-shell";
 
 export const dynamic = "force-dynamic";
 
+/** No se guarda un nombre por admin: la cuenta suele ser un correo compartido (contacto@…). */
+const GENERICOS = ["contacto", "admin", "hola", "info", "equipo"];
+function nombreAdmin(email: string | undefined): string {
+  const local = (email ?? "").split("@")[0].split(/[._+-]/)[0].toLowerCase();
+  if (!local || GENERICOS.includes(local)) return "Equipo Electrificarte";
+  return local.charAt(0).toLocaleUpperCase("es-CL") + local.slice(1);
+}
+
 export default async function AdminLayout({
   children,
 }: {
@@ -22,13 +30,11 @@ export default async function AdminLayout({
   // Autenticado pero sin permisos de admin.
   if (!isAdminEmail(user.email)) {
     return (
-      <main className="bg-muted/30 flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black">
-          <Logo size={26} />
-        </div>
+      <main className="bg-muted flex min-h-screen flex-col items-center justify-center gap-6 px-5 text-center">
+        <Logo className="h-5" />
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Acceso restringido</h1>
-          <p className="text-muted-foreground mt-1 max-w-sm">
+          <h1 className="font-display text-h3 font-bold">Acceso restringido</h1>
+          <p className="text-muted-foreground mt-2 max-w-sm">
             Esta sección es solo para el equipo de Electrificarte.
           </p>
         </div>
@@ -42,7 +48,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <AdminShell user={{ name: "Francisco", role: "Administrador", email: user.email }}>
+    <AdminShell user={{ name: nombreAdmin(user.email), role: "Administración", email: user.email }}>
       {children}
     </AdminShell>
   );

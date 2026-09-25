@@ -8,39 +8,30 @@ interface DashboardShellProps {
   navGroups: NavGroup[]
   user: { name: string; role: string; email?: string }
   homeUrl: string
-  sidebarTitle: string
-  pageTitle: string
-  badge?: string
+  /** Nombre del panel ("Administración", "Vendedor oficial"): va en el header. */
+  panelLabel: string
   children: React.ReactNode
 }
 
-export function DashboardShell({
-  navGroups,
-  user,
-  homeUrl,
-  sidebarTitle,
-  pageTitle,
-  badge,
-  children,
-}: DashboardShellProps) {
+export function DashboardShell({ navGroups, user, homeUrl, panelLabel, children }: DashboardShellProps) {
   return (
     <SidebarProvider
       style={
         {
           "--sidebar-width": "16rem",
-          "--sidebar-width-icon": "3rem",
-          "--header-height": "calc(var(--spacing) * 14)",
+          "--sidebar-width-icon": "3.5rem",
+          "--header-height": "4rem",
         } as React.CSSProperties
       }
     >
-      <AppSidebar navGroups={navGroups} user={user} homeUrl={homeUrl} title={sidebarTitle} />
-      <SidebarInset>
-        <SiteHeader title={pageTitle} badge={badge} />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">{children}</div>
+      <AppSidebar navGroups={navGroups} user={user} homeUrl={homeUrl} />
+      <SidebarInset className="min-w-0">
+        <SiteHeader navGroups={navGroups} panelLabel={panelLabel} />
+        <main className="flex flex-1 flex-col">
+          <div className="mx-auto flex w-full max-w-page flex-1 flex-col gap-8 px-5 py-6 lg:px-8 lg:py-8">
+            {children}
           </div>
-        </div>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )
