@@ -18,7 +18,7 @@ import type { VendorRow } from "@/lib/auth/vendor";
 const CAMPOS: { key: keyof MisDatosInput; label: string; placeholder?: string; ancho?: "full" }[] = [
   { key: "nombre", label: "Nombre" },
   { key: "apellido", label: "Apellido" },
-  { key: "nombre_concesionario", label: "Nombre del comercio", ancho: "full" },
+  { key: "nombre_concesionario", label: "Punto de venta", ancho: "full" },
   { key: "telefono", label: "Teléfono", placeholder: "+56 9 ..." },
   { key: "region", label: "Región" },
   { key: "comuna", label: "Comuna" },
@@ -97,24 +97,17 @@ export function MiCuentaForm({ vendor }: { vendor: VendorRow }) {
         <CardHeader>
           <CardTitle>Identidad y suscripción</CardTitle>
           <CardDescription>
-            Estos datos identifican tu cuenta y los administra Electrificarte. Si algo está mal, escribinos.
+            Estos datos identifican tu cuenta y los administra Electrificarte. Si algo está mal, escríbenos.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <ReadOnly label="Correo" value={vendor.email} />
           <ReadOnly label="RUT" value={vendor.rut_vendors} />
           <div className="grid gap-1.5">
-            <span className="text-muted-foreground text-sm">Estado de la suscripción</span>
+            <span className="text-muted-foreground text-label">Estado de la suscripción</span>
             <div>
-              <Badge
-                variant="outline"
-                className={
-                  estadoActivo
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400"
-                    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
-                }
-              >
-                {vendor.estado || "—"}
+              <Badge variant={estadoActivo ? "soft" : "outline"} className="capitalize">
+                {vendor.estado || "Sin estado"}
               </Badge>
             </div>
           </div>
@@ -125,7 +118,7 @@ export function MiCuentaForm({ vendor }: { vendor: VendorRow }) {
       <Card>
         <CardHeader>
           <CardTitle>Datos de contacto y negocio</CardTitle>
-          <CardDescription>Podés corregir estos datos cuando quieras.</CardDescription>
+          <CardDescription>Puedes corregir estos datos cuando quieras.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           {CAMPOS.map((c) => (
@@ -147,20 +140,20 @@ export function MiCuentaForm({ vendor }: { vendor: VendorRow }) {
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="hover:bg-accent flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm"
+                  className="border-input hover:border-ink-3 flex h-12 w-full cursor-pointer items-center justify-between rounded-control border px-3.5 text-left text-base"
                 >
                   <span className="text-muted-foreground truncate">
                     {marcasSel.size === 0
                       ? "Ninguna marca seleccionada"
-                      : `${marcasSel.size} seleccionada${marcasSel.size === 1 ? "" : "s"} — ${MARCAS.filter((m) => marcasSel.has(m)).join(", ")}`}
+                      : `${marcasSel.size} seleccionada${marcasSel.size === 1 ? "" : "s"}: ${MARCAS.filter((m) => marcasSel.has(m)).join(", ")}`}
                   </span>
                   <ChevronDown className={cn("size-4 shrink-0 transition-transform", marcasOpen && "rotate-180")} />
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-2 grid max-h-56 grid-cols-2 gap-x-4 gap-y-2 overflow-y-auto rounded-lg border p-3 sm:grid-cols-3">
+                <div className="mt-2 grid max-h-56 grid-cols-2 gap-x-4 gap-y-2.5 overflow-y-auto rounded-control border p-4 sm:grid-cols-3">
                   {MARCAS.map((marca) => (
-                    <label key={marca} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <label key={marca} className="flex cursor-pointer items-center gap-2.5 text-small">
                       <Checkbox
                         checked={marcasSel.has(marca)}
                         onCheckedChange={(v) => toggleMarca(marca, v === true)}
@@ -179,7 +172,7 @@ export function MiCuentaForm({ vendor }: { vendor: VendorRow }) {
               {pending ? "Guardando…" : "Guardar cambios"}
             </Button>
             {hayCambios && !pending && (
-              <span className="text-muted-foreground text-sm">
+              <span className="text-muted-foreground text-small">
                 {cambios.length} campo{cambios.length > 1 ? "s" : ""} sin guardar
               </span>
             )}
@@ -188,8 +181,8 @@ export function MiCuentaForm({ vendor }: { vendor: VendorRow }) {
       </Card>
 
       {/* Protección de datos — solo un texto al final */}
-      <p className="text-muted-foreground px-1 text-xs">
-        Bajo la Ley 21.719 podés{" "}
+      <p className="text-muted-foreground text-small">
+        Bajo la Ley 21.719 puedes{" "}
         <a href={mailtoEliminar} className="underline underline-offset-2 hover:text-foreground">
           solicitar la eliminación de tus datos
         </a>
@@ -202,8 +195,8 @@ export function MiCuentaForm({ vendor }: { vendor: VendorRow }) {
 function ReadOnly({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div className="grid gap-1.5">
-      <span className="text-muted-foreground text-sm">{label}</span>
-      <span className="font-medium">{value || "—"}</span>
+      <span className="text-muted-foreground text-label">{label}</span>
+      <span className="font-medium">{value || "Sin dato"}</span>
     </div>
   );
 }

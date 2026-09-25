@@ -12,8 +12,8 @@ interface DonutItem {
   [key: string]: string | number;
 }
 
-/** Donut chart con leyenda lateral — para breakdowns de composición (canal de tráfico,
- * dispositivo). Mismos chart-1..5 del tema ya usados en traffic-chart.tsx. */
+/** Donut con leyenda lateral, para desgloses de composición (canal, dispositivo).
+ * Solo --chart-1..5 del sistema; con más de 5 partes el gráfico está mal planteado. */
 export function DonutBreakdown({
   title,
   description,
@@ -40,7 +40,7 @@ export function DonutBreakdown({
         <ChartContainer config={chartConfig} className="aspect-square h-[160px] w-[160px] shrink-0">
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-            <Pie data={items} dataKey="value" nameKey="label" innerRadius={44} outerRadius={72} strokeWidth={2}>
+            <Pie data={items} dataKey="value" nameKey="label" innerRadius={48} outerRadius={72} stroke="var(--card)" strokeWidth={2} isAnimationActive={false}>
               {items.map((item, i) => (
                 <Cell key={item.label} fill={COLORS[i % COLORS.length]} />
               ))}
@@ -49,10 +49,10 @@ export function DonutBreakdown({
         </ChartContainer>
         <div className="w-full min-w-0 flex-1 space-y-2.5">
           {items.map((item, i) => (
-            <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
+            <div key={item.label} className="flex items-center justify-between gap-3 text-small">
               <span className="flex min-w-0 items-center gap-2">
                 <span
-                  className="size-2.5 shrink-0 rounded-full"
+                  className="size-2.5 shrink-0 rounded-chip"
                   style={{ backgroundColor: COLORS[i % COLORS.length] }}
                   aria-hidden
                 />

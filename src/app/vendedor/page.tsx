@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { Users, Handshake, Trophy, Clock, ArrowRight, Flame } from "lucide-react";
-import { KpiCard } from "@/components/kpi-card";
-import { PageHeader } from "@/components/page-header";
+import { ArrowRight } from "lucide-react";
+import { Kpi, Kpis } from "@/components/kpi";
+import { PageHeader, SectionTitle } from "@/components/page-header";
 import { FeaturedInsightCard } from "@/components/featured-insight-card";
 import { MisOfertasTable } from "@/components/mis-ofertas-table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getMisOfertas, getPoolLeads } from "@/lib/data/vendor-data";
 import { getCurrentVendor } from "@/lib/auth/vendor";
 import { getTopTendencia } from "@/lib/mock/analytics-extra";
+import { formatNumero } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -29,44 +29,41 @@ export default async function VendedorOverviewPage() {
   const saludo = vendor?.nombre || vendor?.nombre_concesionario || "";
 
   return (
-    <div className="flex flex-col gap-8 px-4 lg:px-6">
+    <>
       <PageHeader
-        title="Resumen"
-        subtitle={`Hola${saludo ? `, ${saludo}` : ""} 👋 — así va tu actividad.`}
+        title={saludo ? `Hola, ${saludo}` : "Resumen"}
+        subtitle="Así va tu actividad en la red de vendedores oficiales."
       />
 
+      <Kpis>
+        <Kpi value={formatNumero(pool.length)} label="Leads disponibles" hint="Puedes ofertar ahora" />
+        <Kpi value={formatNumero(ofertas.length)} label="Mis ofertas" hint="Enviadas en total" />
+        <Kpi value={formatNumero(enJuego)} label="En evaluación" hint="Pendientes o evaluándose" />
+        <Kpi value={formatNumero(ganadas)} label="Ganadas" hint="Ganadoras o aceptadas" />
+      </Kpis>
+
       <FeaturedInsightCard
-        icon={Flame}
-        eyebrow="Incluido en tu suscripción — analítica del sitio"
-        title={`${topTendencia.nombre} está en alza: +${topTendencia.variacionPct}%`}
-        description="Visitas, demanda por modelo, embudo de conversión y de dónde viene cada comprador — toda la analítica de electrificarte.com para saber qué modelos ofertar y cómo competir mejor."
+        label="Incluido en tu suscripción: la analítica del sitio"
+        title={`${topTendencia.nombre} está en alza`}
+        description="Visitas, demanda por modelo, embudo de conversión y de dónde viene cada comprador: toda la analítica de electrificarte.com para saber qué modelos ofertar."
         trendPct={topTendencia.variacionPct}
         href="/vendedor/analitica"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Leads disponibles" value={String(pool.length)} icon={Handshake} accent="amber" hint="Puedes ofertar ahora" />
-        <KpiCard label="Mis ofertas" value={String(ofertas.length)} icon={Users} accent="primary" hint="Enviadas en total" />
-        <KpiCard label="En evaluación" value={String(enJuego)} icon={Clock} accent="muted" hint="Pendientes o evaluándose" />
-        <KpiCard label="Ganadas" value={String(ganadas)} icon={Trophy} accent="green" hint="Ganadoras o aceptadas" />
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>Actividad reciente</CardTitle>
-            <CardDescription>Tus últimas ofertas</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" asChild className="cursor-pointer">
-            <Link href="/vendedor/leads-activos">
-              Ver todas <ArrowRight className="size-4" />
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <MisOfertasTable ofertas={recientes} />
-        </CardContent>
-      </Card>
-    </div>
+      <section className="flex flex-col gap-4">
+        <SectionTitle
+          title="Actividad reciente"
+          description="Tus últimas ofertas."
+          action={
+            <Button variant="outline" size="sm" asChild className="group cursor-pointer">
+              <Link href="/vendedor/leads-activos">
+                Ver todas <ArrowRight strokeWidth={1.5} className="transition-transform group-hover:translate-x-[3px]" />
+              </Link>
+            </Button>
+          }
+        />
+        <MisOfertasTable ofertas={recientes} />
+      </section>
+    </>
   );
 }

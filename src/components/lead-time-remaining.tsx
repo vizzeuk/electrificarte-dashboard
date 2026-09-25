@@ -1,24 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, Clock } from "lucide-react";
-import { cn, leadRemaining, type LeadUrgency } from "@/lib/utils";
+import { Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { leadRemaining, type LeadUrgency } from "@/lib/utils";
 
-/** Tratamiento por urgencia — reusa la misma paleta ámbar/rojo/slate que el resto del panel. */
-const STYLES: Record<LeadUrgency, string> = {
-  critico:
-    "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400",
-  urgente:
-    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400",
-  normal:
-    "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400",
-  expirado:
-    "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-500",
+/** El sistema v1 no tiene color de urgencia: la cercanía del cierre se marca con peso.
+ *  Menos de 6 h = chip sólido (Tinta); menos de 24 h = contorno fuerte; resto neutro. */
+const VARIANT: Record<LeadUrgency, "default" | "outline" | "secondary"> = {
+  critico: "default",
+  urgente: "outline",
+  normal: "secondary",
+  expirado: "secondary",
 };
 
 /**
- * Cuenta regresiva viva de la ventana de oferta de un lead. Se refresca cada minuto y
- * cambia de color a medida que se acerca el cierre, para que "queda poco" se vea, no se lea.
+ * Cuenta regresiva viva de la ventana de oferta de un lead. Se refresca cada minuto.
  */
 export function LeadTimeRemaining({
   cierraAt,
@@ -27,8 +24,7 @@ export function LeadTimeRemaining({
   cierraAt: string | null;
   className?: string;
 }) {
-  // Arranca en null: server y cliente renderizan el mismo placeholder, sin mismatch de
-  // hidratación. Tras montar, el intervalo lo mantiene al minuto.
+  // Arranca en null: server y cliente renderizan lo mismo, sin mismatch de hidratación.
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     setNow(Date.now());
@@ -39,28 +35,18 @@ export function LeadTimeRemaining({
   const info = leadRemaining(cierraAt, now ?? undefined);
 
   if (!info) {
-    return (
-      <span className={cn("text-muted-foreground text-sm tabular-nums", className)}>
-        Sin límite
-      </span>
-    );
+    return <span className="text-muted-foreground text-small">Sin límite</span>;
   }
 
-  const Icon = info.urgency === "critico" ? AlertTriangle : Clock;
-
   return (
-    <span
+    <Badge
+      variant={VARIANT[info.urgency]}
       suppressHydrationWarning
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium tabular-nums",
-        STYLES[info.urgency],
-        info.urgency === "critico" && "animate-pulse",
-        className,
-      )}
+      className={[info.urgency === "urgente" ? "border-foreground" : "", "tabular-nums", className].join(" ")}
       title={info.urgency === "expirado" ? "La ventana de oferta cerró" : `Cierra en ${info.label}`}
     >
-      <Icon className="size-3.5" />
+      <Clock strokeWidth={1.5} aria-hidden />
       {info.urgency === "expirado" ? "Cerrado" : info.label}
-    </span>
+    </Badge>
   );
 }

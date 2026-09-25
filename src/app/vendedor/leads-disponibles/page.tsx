@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react";
+import { Clock } from "lucide-react";
 import { PoolTable } from "@/components/pool-table";
 import { PageHeader } from "@/components/page-header";
 import { getPoolLeads, getMisOfertas } from "@/lib/data/vendor-data";
@@ -27,24 +27,24 @@ export default async function LeadsDisponiblesPage() {
   }).length;
 
   return (
-    <div className="flex flex-col gap-6 px-4 lg:px-6">
+    <>
       <PageHeader
         title="Leads disponibles"
-        subtitle={`Leads pagados disponibles para todos los vendedores oficiales — ${leads.length} para ofertar. Cualquiera puede ofertar; no hay asignación previa.`}
+        subtitle={`${leads.length} ${leads.length === 1 ? "lead disponible" : "leads disponibles"} para todos los vendedores oficiales por igual. Cualquiera puede ofertar; no hay asignación previa.`}
       />
 
       {porCerrar > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
-          <AlertTriangle className="size-5 shrink-0" />
-          <p className="text-sm font-medium">
+        <div className="flex items-center gap-3 rounded-card border border-foreground p-4">
+          <Clock className="size-5 shrink-0" strokeWidth={1.5} aria-hidden />
+          <p className="text-small font-medium">
             {porCerrar === 1
-              ? "1 lead cierra en menos de 24 h y todavía no ofertás. Ofertá antes de que se cierre la ventana."
-              : `${porCerrar} leads cierran en menos de 24 h y todavía no ofertás. Ofertá antes de que se cierre la ventana.`}
+              ? "1 lead cierra en menos de 24 h y todavía no ofertas. Oferta antes de que se cierre la ventana."
+              : `${porCerrar} leads cierran en menos de 24 h y todavía no ofertas. Oferta antes de que se cierre la ventana.`}
           </p>
         </div>
       )}
 
       <PoolTable leads={ordenados} ofertadosLeadIds={ofertadosLeadIds} />
-    </div>
+    </>
   );
 }

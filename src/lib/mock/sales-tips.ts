@@ -46,11 +46,11 @@ export function generateSalesTips(ctx: SalesTipsContext = {}): SalesTip[] {
   if (opo > 0) {
     const s = opo === 1 ? "" : "s";
     tips.push({
-      title: `Tenés ${opo} lead${s} en tus marcas sin ofertar`,
+      title: `Tienes ${opo} lead${s} en tus marcas sin ofertar`,
       detail:
         urg > 0
-          ? `${urg} cierra${urg === 1 ? "" : "n"} en menos de 24 h. Ofertá ahora: un lead sin oferta es una venta que se lleva otro vendedor.`
-          : `Cada oferta que enviás es una chance de cierre. Un lead sin ofertar no rinde — mandá tu puja antes de que se cierre la ventana.`,
+          ? `${urg} cierra${urg === 1 ? "" : "n"} en menos de 24 h. Oferta ahora: un lead sin oferta es una venta que se lleva otro vendedor.`
+          : `Cada oferta que envías es una oportunidad de cierre. Un lead sin ofertar no rinde: manda tu puja antes de que se cierre la ventana.`,
     });
   }
 
@@ -61,14 +61,14 @@ export function generateSalesTips(ctx: SalesTipsContext = {}): SalesTip[] {
     .sort((a, b) => b.variacionPct - a.variacionPct)[0];
   if (enAlzaSuyo) {
     tips.push({
-      title: `Priorizá ${enAlzaSuyo.nombre} en tus ofertas`,
-      detail: `Es el modelo de tus marcas con más demanda esta semana (+${enAlzaSuyo.variacionPct}%). Tenelo a mano para ofertar rápido apenas entre un lead.`,
+      title: `Prioriza ${enAlzaSuyo.nombre} en tus ofertas`,
+      detail: `Es el modelo de tus marcas con más demanda esta semana (+${enAlzaSuyo.variacionPct}%). Tenlo a mano para ofertar rápido apenas entre un lead.`,
     });
   }
 
   // 3) Palanca de negocio siempre disponible: ofertar una alternativa cuando no tiene el exacto.
   tips.push({
-    title: "¿No tenés el modelo exacto? Ofertá una alternativa",
+    title: "¿No tienes el modelo exacto? Oferta una alternativa",
     detail:
       "Cuando no tengas el auto que pide el cliente, una alternativa parecida con buen precio o entrega te mantiene compitiendo por ese lead en vez de perderlo.",
   });

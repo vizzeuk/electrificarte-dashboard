@@ -8,12 +8,12 @@ export default async function MisOfertasPage() {
   const ofertas = await getMisOfertas();
 
   return (
-    <div className="flex flex-col gap-8 px-4 lg:px-6">
+    <>
       <PageHeader
         title="Mis ofertas"
-        subtitle={`Tus pujas y su estado — ${ofertas.length} en total. El puntaje y el resultado los define el sistema al evaluar.`}
+        subtitle={`Tus pujas y su estado (${ofertas.length} en total). El puntaje y el resultado los define el sistema al evaluar.`}
       />
       <MisOfertasTable ofertas={ofertas} />
-    </div>
+    </>
   );
 }

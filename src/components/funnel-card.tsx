@@ -1,9 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FunnelStep } from "@/lib/mock/types";
 
-/** Embudo de conversión: barras horizontales con ancho proporcional al paso anterior + caída %
- * entre pasos — la vista más directa de "dónde se pierde gente" para justificar el valor de la
- * analítica. */
+/** Embudo de conversión: barras con ancho proporcional al primer paso y el porcentaje que sigue
+ * entre pasos. La vista más directa de dónde se pierde gente. */
 export function FunnelCard({
   title,
   description,
@@ -21,7 +20,7 @@ export function FunnelCard({
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-col gap-1">
         {steps.map((step, i) => {
           const widthPct = (step.usuarios / max) * 100;
           const prev = steps[i - 1];
@@ -29,15 +28,15 @@ export function FunnelCard({
           return (
             <div key={step.paso}>
               {retentionPct !== null && (
-                <p className="text-muted-foreground py-1 text-xs">↓ {retentionPct}% continúa</p>
+                <p className="text-muted-foreground py-1 text-micro">{retentionPct}% sigue al paso siguiente</p>
               )}
               <div className="flex items-center justify-between gap-3 pb-1">
-                <span className="truncate text-sm font-medium">{step.paso}</span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums">{step.usuarios.toLocaleString("es-CL")}</span>
+                <span className="truncate text-small font-medium">{step.paso}</span>
+                <span className="shrink-0 text-small font-semibold tabular-nums">{step.usuarios.toLocaleString("es-CL")}</span>
               </div>
-              <div className="bg-muted h-3 overflow-hidden rounded-full">
+              <div className="bg-muted h-2.5 overflow-hidden rounded-chip">
                 <div
-                  className="bg-primary h-full rounded-full transition-all"
+                  className="bg-primary h-full rounded-chip"
                   style={{ width: `${Math.max(widthPct, 3)}%` }}
                 />
               </div>

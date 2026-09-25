@@ -2,28 +2,27 @@ import { Lightbulb } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SalesTip } from "@/lib/mock/sales-tips";
 
-/** Capa de "qué hacer con esto" sobre la analítica cruda — el diferencial que justifica que un
- * vendedor pague por esto y no solo por los números. Mismo tratamiento visual amber que ya usa
- * kpi-card.tsx para "atención" — nada de colores nuevos. */
+/** Capa de "qué hacer con esto" sobre la analítica: tips cruzados con las marcas del vendedor.
+ * Lista con hairlines e ícono suelto; sin colores de urgencia. */
 export function SalesTipsCard({ tips }: { tips: SalesTip[] }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Tips de venta para esta semana</CardTitle>
-        <CardDescription>Cruzamos la analítica del sitio con las marcas que ofreces — solo lo que puedes accionar</CardDescription>
+        <CardDescription>Cruzamos la analítica del sitio con las marcas que ofreces: solo lo que puedes accionar.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {tips.map((tip) => (
-          <div key={tip.title} className="flex gap-3 rounded-lg bg-amber-500/8 border border-amber-500/15 p-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Lightbulb className="size-4" />
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-sm font-semibold">{tip.title}</p>
-              <p className="text-muted-foreground text-sm">{tip.detail}</p>
-            </div>
-          </div>
-        ))}
+      <CardContent>
+        <ul className="divide-y">
+          {tips.map((tip) => (
+            <li key={tip.title} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+              <Lightbulb className="mt-0.5 size-5 shrink-0" strokeWidth={1.5} aria-hidden />
+              <div className="grid gap-0.5">
+                <p className="text-small font-semibold">{tip.title}</p>
+                <p className="text-muted-foreground text-small">{tip.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   );

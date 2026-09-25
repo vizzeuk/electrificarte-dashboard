@@ -9,12 +9,12 @@ export default async function MiCuentaPage() {
   if (!vendor) return null; // el layout de /vendedor ya gatea la sesión
 
   return (
-    <div className="flex flex-col gap-8 px-4 lg:px-6">
+    <>
       <PageHeader
         title="Mi cuenta y mis datos"
-        subtitle="Los datos personales que Electrificarte tiene sobre vos. Podés verlos, corregirlos, descargarlos o pedir que se eliminen."
+        subtitle="Los datos personales que Electrificarte tiene sobre ti. Puedes verlos, corregirlos o pedir que se eliminen."
       />
       <MiCuentaForm vendor={vendor} />
-    </div>
+    </>
   );
 }

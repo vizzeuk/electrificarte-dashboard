@@ -24,8 +24,8 @@ export const topPaginas: TopPagina[] = [
   { ruta: "/marcas",       label: "Listado de marcas",        visitas: 3480 },
   { ruta: "/comparador",   label: "Comparador de vehículos",  visitas: 2760 },
   { ruta: "/calculadora",  label: "Calculadora de ahorro",    visitas: 2190 },
-  { ruta: "/tipo/suv",     label: "PLP — SUV eléctricos",     visitas: 1940 },
-  { ruta: "/marcas/byd",   label: "PLP — BYD",                visitas: 1710 },
+  { ruta: "/tipo/suv",     label: "Listado: SUV eléctricos",     visitas: 1940 },
+  { ruta: "/marcas/byd",   label: "Listado: BYD",                visitas: 1710 },
   { ruta: "/solicitar",    label: "Formulario Oferta",        visitas: 1120 },
   { ruta: "/asesoria",     label: "Asesoría IA",              visitas: 640 },
 ];

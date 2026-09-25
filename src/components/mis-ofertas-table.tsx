@@ -8,30 +8,30 @@ import { formatCLP, formatFecha } from "@/lib/utils";
 import type { Oferta } from "@/lib/db/types";
 
 /**
- * "Mis ofertas" — las pujas propias del vendedor con su estado y score. Cada fila es
+ * "Mis ofertas": las pujas propias del vendedor con su estado y score. Cada fila es
  * clickeable y abre el detalle completo de la puja.
  */
 export function MisOfertasTable({ ofertas }: { ofertas: Oferta[] }) {
   const [sel, setSel] = useState<Oferta | null>(null);
 
   return (
-    <div className="overflow-x-auto rounded-2xl border">
-      <Table className="[&_tbody_td]:py-4">
-        <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="text-xs font-semibold uppercase tracking-wider">Vehículo ofertado</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider">Precio</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider">Entrega</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider">Estado</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider">Score</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider">Fecha</TableHead>
+    <div className="overflow-hidden rounded-card border">
+      <Table>
+        <TableHeader className="bg-muted">
+          <TableRow className="hover:bg-muted">
+            <TableHead>Vehículo ofertado</TableHead>
+            <TableHead>Precio</TableHead>
+            <TableHead>Entrega</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead>Puntaje</TableHead>
+            <TableHead>Fecha</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {ofertas.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-muted-foreground py-12 text-center">
-                Todavía no enviaste ofertas. Andá a “Leads disponibles” para ofertar.
+              <TableCell colSpan={6} className="text-muted-foreground py-14 text-center">
+                Todavía no envías ofertas. Ve a “Leads disponibles” para ofertar.
               </TableCell>
             </TableRow>
           )}
@@ -43,25 +43,25 @@ export function MisOfertasTable({ ofertas }: { ofertas: Oferta[] }) {
               <TableRow
                 key={o.id}
                 onClick={() => setSel(o)}
-                className="cursor-pointer hover:bg-muted/50"
+                className="cursor-pointer"
               >
                 <TableCell>
-                  <div className="font-display text-base font-semibold">{vehiculo || "—"}</div>
+                  <div className="text-base font-semibold">{vehiculo || "Sin dato"}</div>
                   {o.descalificada && o.motivo_descalificacion && (
-                    <div className="text-xs text-red-600 dark:text-red-400">
+                    <div className="text-destructive text-micro">
                       Descalificada: {o.motivo_descalificacion}
                     </div>
                   )}
                 </TableCell>
                 <TableCell className="font-medium tabular-nums">{formatCLP(o.precio_oferta)}</TableCell>
                 <TableCell className="text-muted-foreground tabular-nums">
-                  {o.horas_entrega != null ? `${o.horas_entrega} h` : "—"}
+                  {o.horas_entrega != null ? `${o.horas_entrega} h` : "Sin dato"}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={o.estado ?? "pendiente"} />
                 </TableCell>
                 <TableCell className="text-muted-foreground tabular-nums">
-                  {o.score_total != null ? Math.round(o.score_total) : "—"}
+                  {o.score_total != null ? Math.round(o.score_total) : "Sin evaluar"}
                 </TableCell>
                 <TableCell className="text-muted-foreground tabular-nums">{formatFecha(o.created_at)}</TableCell>
               </TableRow>

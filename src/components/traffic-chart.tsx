@@ -23,7 +23,7 @@ export function TrafficChart({
   const chartConfig = {
     visitas: {
       label: seriesLabel,
-      color: "var(--primary)",
+      color: "var(--chart-1)",
     },
   } satisfies ChartConfig;
 
@@ -36,28 +36,23 @@ export function TrafficChart({
       <CardContent className="px-2 sm:px-6">
         <ChartContainer config={chartConfig} className="h-[260px] w-full">
           <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorVisitas" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-visitas)" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="var(--color-visitas)" stopOpacity={0.05} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
+            <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis
               dataKey="fecha"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11 }}
+              tick={{ fontSize: 12 }}
               tickFormatter={(value: string) => (ISO_DATE.test(value) ? value.slice(5) : value)}
             />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} width={40} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} width={40} />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Area
               type="monotone"
               dataKey="visitas"
               stroke="var(--color-visitas)"
-              fill="url(#colorVisitas)"
-              strokeWidth={2}
+              fill="var(--muted)"
+              fillOpacity={1}
+              strokeWidth={1.5}
             />
           </AreaChart>
         </ChartContainer>

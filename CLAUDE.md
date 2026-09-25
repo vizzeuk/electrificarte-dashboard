@@ -8,11 +8,14 @@ Panel interno de Electrificarte: vista **Admin** (Francisco) y vista **Vendedor*
 > y el estado general están en `~/proyects/electrificarteweb/docs/HANDOFF-CONDUCTOR.md` y
 > `~/proyects/electrificarteweb/CLAUDE.md`. Léelos antes de trabajar acá.
 
-## Estado: 100% datos mock
+## Estado de los datos
 
-**No hay backend.** Todo sale de `src/lib/mock/`. Nada se guarda ni se envía: `OfertarDialog`
-muestra un toast y ya. Conectarlo a datos reales (Supabase) es parte de la fase siguiente —
-ver §7 del handoff.
+- **Admin: datos reales de Supabase, solo lectura** (salvo moderar reseñas). Todo se lee con
+  service role en el servidor (`src/lib/data/admin-data.ts`, `reviews-data.ts`), detrás de
+  `getAdminEmail()`. Secciones: Resumen, Waitlist, Asesorías, Newsletter, Feedback del sitio,
+  Vendedores, Leads Oferta (en pausa), Reseñas.
+- **Analítica del sitio: mock** (`src/lib/mock/`). En el admin se rotula "Datos de prueba".
+- Vista vendedor: pool, ofertas y cuenta desde Supabase (RLS); tips y analítica, mock.
 
 ## Stack
 
@@ -22,21 +25,25 @@ Corre en el puerto **3001** (`npm run dev`) para no chocar con electrificarteweb
 ## Estructura
 
 ```
-src/app/admin/      Resumen · Analítica · Leads Asesoría · Leads Oferta · Reseñas (moderación) · Vendedores
-src/app/vendedor/   Resumen · Analítica · Mis ofertas · Leads disponibles · Mi cuenta (datos, Ley 21.719)
-src/components/     Componentes propios (kpi-card, top-list, site-analytics…)
-src/components/ui/  shadcn — no editar a mano, se regeneran
-src/lib/mock/       Todos los datos simulados + tipos
+src/app/admin/        Resumen · Waitlist · Asesorías · Newsletter · Feedback · Vendedores · Leads Oferta · Reseñas · Analítica
+src/app/vendedor/     Resumen · Leads disponibles · Mis ofertas · Analítica · Mi cuenta (Ley 21.719)
+src/components/       Propios: data-table (búsqueda, filtros, orden, CSV, detalle), kpi, page-header…
+src/components/admin/ Tablas de cada sección admin (columnas en cliente)
+src/components/ui/    shadcn, ajustado al sistema v1 (sin sombras, radios 4/8/12, alturas 40/48/56)
+src/lib/mock/         Datos simulados de la analítica
 ```
 
 ## Diseño
 
-Alineado con electrificarteweb: cyan `#00E5E5` como primario, `--chart-1..5` para gráficos,
-soporte claro/oscuro vía `next-themes`. **No cambiar colores ni tipografías** sin autorización;
-sí se pueden agregar componentes dentro de esa línea.
-
-Jerarquía visual establecida (2026-08-11): hero (`FeaturedInsightCard`) > KPIs con sparkline >
-gráficos/ranking > listas. La fila #1 de cualquier ranking se destaca con fondo tintado.
+Rige el **sistema de diseño v1** de la web (fuente de verdad: `docs/design/portable/` en
+electrificarteweb). `src/app/tokens.css` y `src/app/shadcn-theme.css` son **copias**: no se
+editan acá, se vuelven a copiar si cambia un token. Laguna `#1d605b` = acción (`bg-primary`),
+Glaciar `#caefea` = bloque destacado, uno por pantalla (`bg-accent-soft`); en shadcn `accent`
+es el hover suave. Cabinet Grotesk (títulos) + Switzer (todo lo demás), bajadas por
+`scripts/fetch-fonts.mjs` en predev/prebuild (no se versionan). Tema claro/oscuro con
+next-themes (clase `.dark`, toggle en el header). **`npm run design:check`** falla si vuelve un
+patrón del diseño anterior. Ojo: `cn()` usa un tailwind-merge extendido con la escala del
+sistema (`text-micro`, `rounded-card`…); sin eso borra tamaños de letra.
 
 ## Decisiones que conviene conocer
 
@@ -61,6 +68,6 @@ activos por igual**. No hay asignación 1:1. Cualquiera puede ofertar. Un dashbo
 ## Verificar
 
 ```bash
-npx tsc --noEmit && npm run build
+npx tsc --noEmit && npm run design:check && npm run build
 npm run dev    # puerto 3001
 ```

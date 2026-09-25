@@ -1,15 +1,15 @@
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
 import { ArrowRight } from "lucide-react";
 import { TrendBadge } from "@/components/trend-badge";
 import { cn } from "@/lib/utils";
 
-/** Callout grande para UN dato destacado — el "hero" de analítica y el teaser en Resumen.
- * Superficie negra con acento cyan (el recurso dramático del sitio): se lee como el dato
- * más importante de la pantalla. Sin gradientes ni relleno decorativo. */
+/**
+ * El bloque destacado de la pantalla (Glaciar, uno solo por pantalla): UN dato que importa más
+ * que el resto. Macizo, sin degradados ni sombra. Es Glaciar en ambos temas, por eso el botón
+ * usa los primitivos (Laguna) en vez de bg-primary, que en oscuro también sería Glaciar.
+ */
 export function FeaturedInsightCard({
-  icon: Icon,
-  eyebrow,
+  label,
   title,
   description,
   trendPct,
@@ -17,8 +17,8 @@ export function FeaturedInsightCard({
   hrefLabel = "Ver analítica completa",
   className,
 }: {
-  icon: LucideIcon;
-  eyebrow: string;
+  /** Frase corta arriba del título, en sentence case (no es un eyebrow en mayúsculas). */
+  label?: string;
   title: string;
   description: string;
   trendPct?: number;
@@ -27,34 +27,26 @@ export function FeaturedInsightCard({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-2xl bg-black p-8 text-white sm:p-10",
-        className,
-      )}
-    >
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-3">
-          <div className="text-primary flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-            <Icon className="size-4" />
-            {eyebrow}
+    <section className={cn("bg-accent-soft text-on-accent-soft rounded-card p-6 sm:p-8", className)}>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          {label && <p className="text-small font-semibold">{label}</p>}
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <h2 className="font-display text-h3 font-bold">{title}</h2>
+            {trendPct !== undefined && <TrendBadge pct={trendPct} className="bg-tinta text-papel" />}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
-            {trendPct !== undefined && <TrendBadge pct={trendPct} />}
-          </div>
-          <p className="max-w-xl text-sm text-white/70 sm:text-base">{description}</p>
+          <p className="mt-3 max-w-xl text-base">{description}</p>
         </div>
         {href && (
           <Link
             href={href}
-            className="group bg-primary text-primary-foreground inline-flex shrink-0 items-center gap-1.5 self-start rounded-xl px-5 py-3 text-sm font-bold transition-colors hover:bg-[#00c2c2] sm:self-center"
+            className="group bg-laguna text-papel hover:bg-laguna-hover inline-flex h-12 shrink-0 items-center gap-2 self-start rounded-control px-5 text-[15px] font-semibold transition-colors focus-visible:outline-tinta sm:self-auto"
           >
             {hrefLabel}
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="size-[18px] transition-transform group-hover:translate-x-[3px]" strokeWidth={1.5} />
           </Link>
         )}
       </div>
-    </div>
+    </section>
   );
 }

@@ -105,7 +105,7 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
         return;
       }
       toast.success("Oferta enviada", {
-        description: "Tu puja quedó en evaluación. Vas a ver su estado en “Mis ofertas”.",
+        description: "Tu puja quedó en evaluación. Verás su estado en “Mis ofertas”.",
       });
       reset();
       setOpen(false);
@@ -123,7 +123,7 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" className="cursor-pointer">
+        <Button size="sm" variant="outline" className="cursor-pointer">
           Ofertar
         </Button>
       </DialogTrigger>
@@ -131,26 +131,26 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
         <DialogHeader>
           <DialogTitle>Ofertar</DialogTitle>
           <DialogDescription>
-            {ubicacion ? `${ubicacion} · ` : ""}Ingresá tu puja para este lead.
+            {ubicacion ? `Lead en ${ubicacion}. ` : ""}Ingresa tu puja para este lead.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-1">
           {/* Vehículo que pidió el cliente — prioridad */}
-          <div className="rounded-lg border bg-muted/40 p-3">
-            <p className="text-muted-foreground text-xs">El cliente busca</p>
-            <p className="text-base font-semibold">
+          <div className="bg-muted rounded-card p-4">
+            <p className="text-muted-foreground text-label">El cliente busca</p>
+            <p className="mt-1 text-base font-semibold">
               {lead.target_model || "No especificó un modelo"}
             </p>
             {tieneModeloPedido && (
-              <label className="mt-3 flex items-start gap-2 text-sm">
+              <label className="mt-3 flex items-start gap-2.5 text-small">
                 <Checkbox
                   checked={alternativa}
                   onCheckedChange={(v) => setAlternativa(v === true)}
                   className="mt-0.5 cursor-pointer"
                 />
                 <span className="cursor-pointer">
-                  No tengo ese modelo exacto — ofrezco una alternativa parecida
+                  No tengo ese modelo exacto: ofrezco una alternativa parecida
                 </span>
               </label>
             )}
@@ -158,7 +158,7 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
 
           {/* Alternativa: recién acá se declara otro vehículo */}
           {(alternativa || !tieneModeloPedido) && (
-            <div className="grid gap-3 rounded-lg border p-3">
+            <div className="grid gap-3 rounded-card border p-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
                   <Label htmlFor="alt-marca">Marca</Label>
@@ -182,10 +182,10 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
                           onClick={() => setComparacion(c.value)}
                           aria-pressed={active}
                           className={cn(
-                            "cursor-pointer rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                            "h-10 cursor-pointer rounded-control border text-small font-semibold transition-colors",
                             active
                               ? "border-primary bg-primary text-primary-foreground"
-                              : "hover:bg-accent hover:text-accent-foreground",
+                              : "border-input hover:border-foreground",
                           )}
                         >
                           {c.label}
@@ -227,7 +227,7 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="horas">Horas de entrega (≤96)</Label>
+            <Label htmlFor="horas">Horas de entrega (máximo 96)</Label>
             <Input
               id="horas"
               inputMode="numeric"
@@ -238,8 +238,8 @@ export function OfertarDialog({ lead }: { lead: PoolLead }) {
           </div>
 
           {/* Regalías / beneficios — opcional */}
-          <div className="grid gap-3 rounded-lg border p-3">
-            <label className="flex items-center gap-2 text-sm">
+          <div className="grid gap-3 rounded-card border p-4">
+            <label className="flex items-center gap-2.5 text-small">
               <Checkbox
                 checked={incluyeRegalias}
                 onCheckedChange={(v) => setIncluyeRegalias(v === true)}
