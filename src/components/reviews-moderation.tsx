@@ -176,7 +176,7 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
         )}
 
         {/* Autor (datos personales, solo admin) */}
-        <dl className="bg-muted grid gap-4 rounded-card p-4 sm:grid-cols-3">
+        <dl className="bg-muted dark:bg-background grid gap-4 rounded-card p-4 sm:grid-cols-3">
           <div className="grid gap-1">
             <dt className="text-muted-foreground text-label">Autor</dt>
             <dd className="text-small font-semibold">{nombre}</dd>
