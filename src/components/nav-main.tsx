@@ -1,9 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 
 import type { NavItem } from "@/components/app-sidebar"
+import { conPeriodo } from "@/lib/periodo"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -22,6 +23,8 @@ export function isActivePath(pathname: string, url: string): boolean {
 
 export function NavMain({ label, items }: { label: string; items: NavItem[] }) {
   const pathname = usePathname()
+  // El período elegido (?periodo=, ?desde=…) viaja entre secciones para no perder la vista.
+  const sp = useSearchParams()
   const { isMobile, setOpenMobile } = useSidebar()
 
   return (
@@ -39,7 +42,7 @@ export function NavMain({ label, items }: { label: string; items: NavItem[] }) {
                 className="h-10 gap-3 border border-transparent text-small data-[active=true]:border-sidebar-border data-[active=true]:font-semibold [&>svg]:size-[18px]"
               >
                 <Link
-                  href={item.url}
+                  href={conPeriodo(item.url, sp)}
                   aria-current={active ? "page" : undefined}
                   onClick={() => isMobile && setOpenMobile(false)}
                 >

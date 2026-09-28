@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Search, SearchX, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -11,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn, formatNumero } from "@/lib/utils";
+import type { PeriodoInfo } from "@/lib/periodo";
 
 /**
  * Tabla genérica del panel admin. Todo corre en el cliente sobre filas ya leídas en el servidor
@@ -95,6 +98,7 @@ export function DataTable<T>({
   emptyTitle,
   emptyDescription,
   rowClassName,
+  periodo,
 }: {
   rows: T[];
   columns: Column<T>[];
@@ -117,7 +121,15 @@ export function DataTable<T>({
   emptyTitle: string;
   emptyDescription?: React.ReactNode;
   rowClassName?: (row: T) => string | undefined;
+  /**
+   * Período global de la página (selector del encabezado). Si viene, las filas ya llegan
+   * filtradas por él: la tabla no ofrece su propio rango de fechas y el vacío lo explica.
+   */
+  periodo?: PeriodoInfo;
 }) {
+  const pathname = usePathname();
+  const sp = useSearchParams();
+  if (periodo) dateOf = undefined;
   const [q, setQ] = useState("");
   const [valores, setValores] = useState<Record<string, string>>({});
   const [rango, setRango] = useState<Rango>("todo");
@@ -189,6 +201,26 @@ export function DataTable<T>({
   }
 
   if (rows.length === 0) {
+    if (periodo && periodo.key !== "todo") {
+      const q = new URLSearchParams(sp?.toString());
+      q.delete("desde");
+      q.delete("hasta");
+      q.set("periodo", "todo");
+      return (
+        <div className="rounded-card border">
+          <EmptyState
+            icon={emptyIcon}
+            title="Nada en este período"
+            description={`No hay registros en ${periodo.key === "rango" ? `el rango ${periodo.etiqueta}` : periodo.etiqueta.toLocaleLowerCase("es-CL")}.`}
+            action={
+              <Button asChild variant="outline" size="sm">
+                <Link href={`${pathname}?${q.toString()}`} scroll={false}>Ver todo el historial</Link>
+              </Button>
+            }
+          />
+        </div>
+      );
+    }
     return (
       <div className="rounded-card border">
         <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
@@ -220,7 +252,7 @@ export function DataTable<T>({
             <p className="text-muted-foreground text-small whitespace-nowrap tabular-nums" aria-live="polite">
               {hayFiltros
                 ? `${formatNumero(filtradas.length)} de ${formatNumero(rows.length)}`
-                : `${formatNumero(rows.length)} en total`}
+                : `${formatNumero(rows.length)} ${periodo && periodo.key !== "todo" ? "en el período" : "en total"}`}
             </p>
             {csvName && (
               <Button
