@@ -6,6 +6,7 @@ import { MailLink, WhatsAppLink } from "@/components/contact-links";
 import { StatusBadge } from "@/components/status-badge";
 import type { AsesoriaRow } from "@/lib/data/admin-data";
 import { formatFecha, formatFechaHora, hace } from "@/lib/utils";
+import type { PeriodoInfo } from "@/lib/periodo";
 
 const ESTADOS = [
   { value: "activa", label: "Activas" },
@@ -28,7 +29,7 @@ function Vigencia({ r }: { r: AsesoriaRow }) {
   return <Vacio>No aplica</Vacio>;
 }
 
-export function AsesoriasTable({ rows, now }: { rows: AsesoriaRow[]; now: number }) {
+export function AsesoriasTable({ rows, now, periodo }: { rows: AsesoriaRow[]; now: number; periodo?: PeriodoInfo }) {
   const columns: Column<AsesoriaRow>[] = [
     {
       id: "nombre",
@@ -107,6 +108,7 @@ export function AsesoriasTable({ rows, now }: { rows: AsesoriaRow[]; now: number
       filters={filters}
       dateOf={(r) => r.created_at}
       now={now}
+      periodo={periodo}
       defaultSort={{ id: "fecha", desc: true }}
       csvName="asesorias"
       emptyIcon={Sparkles}

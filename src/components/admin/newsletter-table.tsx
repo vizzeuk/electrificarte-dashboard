@@ -5,8 +5,9 @@ import { DataTable, type Column } from "@/components/data-table";
 import { MailLink } from "@/components/contact-links";
 import type { NewsletterRow } from "@/lib/data/admin-data";
 import { formatFecha, formatFechaHora, hace } from "@/lib/utils";
+import type { PeriodoInfo } from "@/lib/periodo";
 
-export function NewsletterTable({ rows, now }: { rows: NewsletterRow[]; now: number }) {
+export function NewsletterTable({ rows, now, periodo }: { rows: NewsletterRow[]; now: number; periodo?: PeriodoInfo }) {
   const columns: Column<NewsletterRow>[] = [
     {
       id: "email",
@@ -37,6 +38,7 @@ export function NewsletterTable({ rows, now }: { rows: NewsletterRow[]; now: num
       searchPlaceholder="Buscar por email"
       dateOf={(r) => r.created_at}
       now={now}
+      periodo={periodo}
       defaultSort={{ id: "fecha", desc: true }}
       csvName="newsletter"
       emptyIcon={Mail}

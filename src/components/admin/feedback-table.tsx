@@ -5,8 +5,9 @@ import { Estrellas } from "@/components/estrellas";
 import { DataTable, Vacio, type Column, type FilterDef } from "@/components/data-table";
 import type { RatingRow } from "@/lib/data/admin-data";
 import { formatFecha, formatFechaHora, hace } from "@/lib/utils";
+import type { PeriodoInfo } from "@/lib/periodo";
 
-export function FeedbackTable({ rows, now }: { rows: RatingRow[]; now: number }) {
+export function FeedbackTable({ rows, now, periodo }: { rows: RatingRow[]; now: number; periodo?: PeriodoInfo }) {
   const columns: Column<RatingRow>[] = [
     {
       id: "nota",
@@ -69,6 +70,7 @@ export function FeedbackTable({ rows, now }: { rows: RatingRow[]; now: number })
       filters={filters}
       dateOf={(r) => r.created_at}
       now={now}
+      periodo={periodo}
       defaultSort={{ id: "fecha", desc: true }}
       csvName="feedback-sitio"
       emptyIcon={MessageSquareText}

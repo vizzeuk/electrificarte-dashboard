@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import type { VendedorRow } from "@/lib/data/admin-data";
 import { parseMarcas } from "@/lib/marcas";
 import { formatFecha, formatFechaHora, formatNumero, nombreCompleto } from "@/lib/utils";
+import type { PeriodoInfo } from "@/lib/periodo";
 
 const nombre = (v: VendedorRow) => nombreCompleto(v.nombre, v.apellido);
 const ubicacion = (v: VendedorRow) => [v.comuna, v.region].map((x) => x?.trim()).filter(Boolean).join(", ");
@@ -26,7 +27,7 @@ function Marcas({ marcas }: { marcas: string | null }) {
   );
 }
 
-export function VendedoresTable({ rows, now }: { rows: VendedorRow[]; now: number }) {
+export function VendedoresTable({ rows, now, periodo }: { rows: VendedorRow[]; now: number; periodo?: PeriodoInfo }) {
   const estados = [...new Set(rows.map((r) => (r.estado ?? "").toLowerCase()))].filter(Boolean).sort();
   const regiones = [...new Set(rows.map((r) => r.region?.trim() ?? ""))].filter(Boolean).sort();
   const marcas = [...new Set(rows.flatMap((r) => parseMarcas(r.marcas)))].sort((a, b) => a.localeCompare(b, "es"));
@@ -114,6 +115,7 @@ export function VendedoresTable({ rows, now }: { rows: VendedorRow[]; now: numbe
       filters={filters}
       dateOf={(r) => r.created_at}
       now={now}
+      periodo={periodo}
       defaultSort={{ id: "fecha", desc: true }}
       csvName="vendedores"
       emptyIcon={Store}

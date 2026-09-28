@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import type { WaitlistRow } from "@/lib/data/admin-data";
 import { fuenteLabel } from "@/lib/labels";
 import { autoUrl, formatFecha, formatFechaHora, hace, nombreCompleto } from "@/lib/utils";
+import type { PeriodoInfo } from "@/lib/periodo";
 
 const nombre = (r: WaitlistRow) => r.full_name || nombreCompleto(r.first_name, r.last_name);
 
-export function WaitlistTable({ rows, now }: { rows: WaitlistRow[]; now: number }) {
+export function WaitlistTable({ rows, now, periodo }: { rows: WaitlistRow[]; now: number; periodo?: PeriodoInfo }) {
   const fuentes = [...new Set(rows.map((r) => r.source ?? ""))].filter(Boolean).sort();
 
   const columns: Column<WaitlistRow>[] = [
@@ -117,6 +118,7 @@ export function WaitlistTable({ rows, now }: { rows: WaitlistRow[]; now: number 
       filters={filters}
       dateOf={(r) => r.created_at}
       now={now}
+      periodo={periodo}
       defaultSort={{ id: "fecha", desc: true }}
       csvName="waitlist"
       emptyIcon={ListChecks}
