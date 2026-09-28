@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export function Estrellas({ n, className }: { n: number | null | undefined; className?: string }) {
   const v = Math.round(n ?? 0);
   return (
-    <span className={cn("inline-flex items-center gap-0.5", className)} role="img" aria-label={`${n ?? 0} de 5 estrellas`}>
+    <span className={cn("inline-flex items-center gap-0.5", className)} role="img" aria-label={`${(n ?? 0).toLocaleString("es-CL", { maximumFractionDigits: 1 })} de 5 estrellas`}>
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { Estrellas } from "@/components/estrellas";
 import { MailLink, OutLink, WhatsAppLink } from "@/components/contact-links";
+import { CategoriasResena, formatNota, ProsContras } from "@/components/resena-categorias";
 import {
   Dialog,
   DialogContent,
@@ -135,7 +136,7 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
           <div className="grid gap-2">
             <div className="flex items-center gap-2">
               <Estrellas n={current.rating} className="[&_svg]:size-5" />
-              <span className="text-muted-foreground text-small tabular-nums">{current.rating ?? 0} de 5</span>
+              <span className="text-muted-foreground text-small tabular-nums">{formatNota(current.rating)} de 5</span>
             </div>
             <h3 className="font-display text-h3 font-bold">{auto || "Auto sin identificar"}</h3>
             {detalleAuto && <p className="text-muted-foreground text-small">{detalleAuto}</p>}
@@ -154,6 +155,10 @@ export function ReviewsModeration({ reviews }: { reviews: PendingReview[] }) {
         <p className="max-w-prose text-base leading-relaxed whitespace-pre-wrap">
           {current.body || <span className="text-muted-foreground">Sin texto</span>}
         </p>
+
+        {/* Notas por categoría y pros/contras (formulario del 27-sep; las antiguas no los traen) */}
+        <CategoriasResena r={current} />
+        <ProsContras r={current} />
 
         {/* Fotos en grande */}
         {current.fotos.length > 0 ? (

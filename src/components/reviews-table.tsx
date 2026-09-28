@@ -4,9 +4,11 @@ import { Star } from "lucide-react";
 import { DataTable, DetailList, Vacio, type Column, type FilterDef } from "@/components/data-table";
 import { OutLink } from "@/components/contact-links";
 import { Estrellas } from "@/components/estrellas";
+import { CategoriasResena, categoriasTexto, formatNota, ProsContras, tieneCategorias } from "@/components/resena-categorias";
 import { Badge } from "@/components/ui/badge";
 import { formatFecha, formatFechaHora, formatNumero, SITIO } from "@/lib/utils";
 import type { ReviewRow } from "@/lib/data/reviews-data";
+import type { PeriodoInfo } from "@/lib/periodo";
 
 type EstadoKey = "pendiente" | "rechazada" | "auto" | "aprobada";
 
@@ -37,7 +39,7 @@ function Auto({ r }: { r: ReviewRow }) {
  * Lista de solo lectura con todas las reseñas. Sin acciones: solo las reseñas con fotos se
  * aprueban o rechazan, y eso se hace en la cola de arriba (ReviewsModeration).
  */
-export function ReviewsTable({ reviews, now }: { reviews: ReviewRow[]; now: number }) {
+export function ReviewsTable({ reviews, now, periodo }: { reviews: ReviewRow[]; now: number; periodo?: PeriodoInfo }) {
   const columns: Column<ReviewRow>[] = [
     {
       id: "auto",
@@ -51,9 +53,17 @@ export function ReviewsTable({ reviews, now }: { reviews: ReviewRow[]; now: numb
       id: "nota",
       header: "Nota",
       sortValue: (r) => r.rating,
-      csv: (r) => r.rating,
-      cell: (r) => <Estrellas n={r.rating} />,
+      csv: (r) => (r.rating == null ? null : formatNota(r.rating)),
+      cell: (r) => (
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          <Estrellas n={r.rating} />
+          <span className="text-muted-foreground tabular-nums">{r.rating == null ? "" : formatNota(r.rating)}</span>
+        </span>
+      ),
     },
+    { id: "categorias", header: "Categorías", hideOnDesktop: true, hideOnMobile: true, csv: (r) => categoriasTexto(r), cell: (r) => categoriasTexto(r) },
+    { id: "pros", header: "Lo bueno", hideOnDesktop: true, hideOnMobile: true, csv: (r) => r.pros, cell: (r) => r.pros },
+    { id: "contras", header: "Lo que mejoraría", hideOnDesktop: true, hideOnMobile: true, csv: (r) => r.contras, cell: (r) => r.contras },
     { id: "autor", header: "Autor", sortValue: (r) => autor(r).toLowerCase() || null, csv: (r) => autor(r), cell: (r) => autor(r) || <Vacio>Anónimo</Vacio> },
     {
       id: "texto",
@@ -99,6 +109,20 @@ export function ReviewsTable({ reviews, now }: { reviews: ReviewRow[]; now: numb
       ],
       get: (r) => (r.fotos > 0 ? "si" : "no"),
     },
+    ...(reviews.some(tieneCategorias)
+      ? [
+          {
+            id: "categorias",
+            label: "Categorías",
+            allLabel: "Con y sin categorías",
+            options: [
+              { value: "si", label: "Con notas por categoría" },
+              { value: "no", label: "Solo nota general" },
+            ],
+            get: (r: ReviewRow) => (tieneCategorias(r) ? "si" : "no"),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -106,11 +130,12 @@ export function ReviewsTable({ reviews, now }: { reviews: ReviewRow[]; now: numb
       rows={reviews}
       columns={columns}
       getRowId={(r) => r.id}
-      searchText={(r) => [auto(r), r.first_name, r.last_name, r.body].filter(Boolean).join(" ")}
+      searchText={(r) => [auto(r), r.first_name, r.last_name, r.body, r.pros, r.contras].filter(Boolean).join(" ")}
       searchPlaceholder="Buscar por auto, autor o texto"
       filters={filters}
       dateOf={(r) => r.created_at}
       now={now}
+      periodo={periodo}
       defaultSort={{ id: "fecha", desc: true }}
       csvName="resenas"
       emptyIcon={Star}
@@ -121,9 +146,11 @@ export function ReviewsTable({ reviews, now }: { reviews: ReviewRow[]; now: numb
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-2">
             <Estrellas n={r.rating} className="[&_svg]:size-5" />
-            <span className="text-muted-foreground text-small">{r.rating ?? 0} de 5</span>
+            <span className="text-muted-foreground text-small">{formatNota(r.rating)} de 5</span>
           </div>
           <p className="text-base leading-relaxed whitespace-pre-wrap">{r.body || <Vacio>Sin texto</Vacio>}</p>
+          <CategoriasResena r={r} className="sm:grid-cols-2" />
+          <ProsContras r={r} className="sm:grid-cols-1" />
           <DetailList
             items={[
               { label: "Autor", value: autor(r) || <Vacio>Anónimo</Vacio> },
