@@ -46,7 +46,7 @@ export function WaitlistVendedoresTable({ rows, now, periodo }: { rows: Waitlist
         </span>
       ),
     },
-    { id: "punto", header: "Punto de venta", hideOnDesktop: true, csv: (r) => r.punto_venta, cell: (r) => r.punto_venta ?? <Vacio /> },
+    { id: "punto", header: "Punto de venta", hideOnDesktop: true, hideOnMobile: true, csv: (r) => r.punto_venta, cell: (r) => r.punto_venta ?? <Vacio /> },
     {
       id: "contacto",
       header: "Contacto",

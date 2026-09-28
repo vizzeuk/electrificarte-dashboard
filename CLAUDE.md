@@ -13,7 +13,17 @@ Panel interno de Electrificarte: vista **Admin** (Francisco) y vista **Vendedor*
 - **Admin: datos reales de Supabase, solo lectura** (salvo moderar reseñas). Todo se lee con
   service role en el servidor (`src/lib/data/admin-data.ts`, `reviews-data.ts`), detrás de
   `getAdminEmail()`. Secciones: Resumen, Waitlist, Asesorías, Newsletter, Feedback del sitio,
-  Vendedores, Leads Oferta (en pausa), Reseñas.
+  Vendedores, Waitlist de vendedores, Leads Oferta (en pausa), Reseñas.
+- **Período (vista BI):** vive en la URL (`?periodo=7d|30d|90d|12m|todo`, o `?desde=&hasta=`
+  AAAA-MM-DD, más `?agrupar=dia|semana|mes`), en hora de Chile. `lib/periodo.ts` lo resuelve
+  (y el período anterior de igual largo para las variaciones); `lib/series.ts` agrupa y compara.
+  Las lecturas se acotan desde el inicio del período anterior. La barra lateral conserva el
+  período al navegar y las tablas (`DataTable` con `periodo`) ya reciben filas filtradas.
+- **Resumen configurable:** `components/admin/resumen-widgets.tsx` es el registro de bloques;
+  la configuración (orden + ocultos) se guarda en localStorage por usuario
+  (`ec-panel:resumen:v1:<email>`). Para agregar un bloque, sumarlo al registro con id nuevo.
+- **Fail-soft con migraciones:** reseñas por categoría y `waitlist_vendedores` (migración del
+  27-sep en la web) se leen con reintento sin columnas / aviso si la tabla no existe.
 - **Analítica del sitio: mock** (`src/lib/mock/`). En el admin se rotula "Datos de prueba".
 - Vista vendedor: pool, ofertas y cuenta desde Supabase (RLS); tips y analítica, mock.
 
