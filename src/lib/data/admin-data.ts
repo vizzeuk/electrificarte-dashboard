@@ -1,7 +1,6 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getAdminEmail } from "@/lib/auth/admin";
-import { slugATitulo } from "@/lib/utils";
 
 // El admin ve datos completos (incluida PII), por eso lee con service role.
 // SIEMPRE detrás del gating de admin: cada función valida la sesión de admin y, si no la hay,
@@ -18,6 +17,17 @@ async function assertAdmin(): Promise<boolean> {
 
 function logError(where: string, error: { message: string } | null) {
   if (error) console.error(`${where}:`, error.message);
+}
+
+/** ms → ISO para filtrar por fecha en Supabase. */
+function iso(t: number): string {
+  return new Date(t).toISOString();
+}
+
+/** Error de "la tabla o la columna todavía no existe" (migración sin aplicar). */
+export function faltaEsquema(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return ["42P01", "42703", "PGRST204", "PGRST205"].includes(error.code ?? "") || /does not exist|could not find/i.test(error.message ?? "");
 }
 
 // ─── Waitlist ────────────────────────────────────────────────────────────────
@@ -38,22 +48,53 @@ export interface WaitlistRow {
   ultima: boolean;
 }
 
-export async function getWaitlist(): Promise<WaitlistRow[]> {
-  if (!(await assertAdmin())) return [];
+/** Inscripción en versión liviana (sin datos personales salvo el email, para deduplicar). */
+export interface WaitlistLigera {
+  id: string;
+  created_at: string | null;
+  email: string | null;
+  contacted: boolean | null;
+}
+
+export interface WaitlistResult {
+  /** Inscripciones desde `desde` (o todas), completas, más nuevas primero. */
+  rows: WaitlistRow[];
+  /** Todas las inscripciones en versión liviana: totales de hoy y "repetida". */
+  todas: WaitlistLigera[];
+}
+
+/** Clave de persona: el email normalizado (la tabla no deduplica). */
+export const clavePersona = (r: { email: string | null; id: string }) => (r.email ?? r.id).trim().toLowerCase();
+
+/**
+ * Waitlist. Las filas completas se leen solo desde `desde`; para saber si una inscripción es
+ * la última de esa persona se mira la lista liviana completa (id, fecha, email).
+ */
+export async function getWaitlist(desde: number | null = null): Promise<WaitlistResult> {
+  if (!(await assertAdmin())) return { rows: [], todas: [] };
   const db = createServiceClient();
-  const { data, error } = await db
+  let q = db
     .from("waitlist")
     .select("id, created_at, first_name, last_name, full_name, email, phone, model, source, contacted, notes")
     .order("created_at", { ascending: false })
     .limit(LIMITE);
-  logError("getWaitlist", error);
+  if (desde != null) q = q.gte("created_at", iso(desde));
+  const [full, ligera] = await Promise.all([
+    q,
+    db.from("waitlist").select("id, created_at, email, contacted").order("created_at", { ascending: false }).limit(LIMITE),
+  ]);
+  logError("getWaitlist", full.error);
+  logError("getWaitlist/ligera", ligera.error);
+  const todas = (ligera.data ?? []) as WaitlistLigera[];
+  const ultimas = new Set<string>();
   const vistos = new Set<string>();
-  return (data ?? []).map((r) => {
-    const key = (r.email ?? r.id).trim().toLowerCase();
-    const ultima = !vistos.has(key);
-    vistos.add(key);
-    return { ...r, ultima } as WaitlistRow;
-  });
+  for (const r of todas) {
+    const k = clavePersona(r);
+    if (!vistos.has(k)) ultimas.add(r.id);
+    vistos.add(k);
+  }
+  const rows = (full.data ?? []).map((r) => ({ ...r, ultima: ultimas.size ? ultimas.has(r.id) : true }) as WaitlistRow);
+  return { rows, todas };
 }
 
 // ─── Asesorías $4.990 ────────────────────────────────────────────────────────
@@ -82,7 +123,7 @@ export const ASESORIA_DIAS = 10;
 const CANCELADOS = ["cancelled", "canceled", "cancelado", "expired", "expirado", "inactive", "inactivo"];
 
 /** Réplica de la vista asesorias_estado (scripts/sql/2026-09-24_asesorias_estado.sql en la web). */
-function calcularEstado(
+export function calcularEstado(
   r: { status: string | null; paid_at: string | null; created_at: string | null },
   now: number,
 ): Pick<AsesoriaRow, "inicio" | "vence" | "estado" | "dias_restantes"> {
@@ -111,15 +152,24 @@ export interface AsesoriasResult {
   fuente: "vista" | "calculado";
 }
 
-export async function getAsesorias(): Promise<AsesoriasResult> {
+/** Fecha del pago de una asesoría pagada (la misma regla del bot: paid_at o, si falta, created_at). */
+export function fechaPago(r: Pick<AsesoriaRow, "estado" | "paid_at" | "created_at">): string | null {
+  return r.estado === "activa" || r.estado === "vencida" ? (r.paid_at ?? r.created_at) : null;
+}
+
+/** Asesorías con formulario o pago desde `desde` (o todas). */
+export async function getAsesorias(desde: number | null = null): Promise<AsesoriasResult> {
   if (!(await assertAdmin())) return { rows: [], fuente: "calculado" };
   const db = createServiceClient();
+  const filtro = desde != null ? `created_at.gte.${iso(desde)},paid_at.gte.${iso(desde)}` : null;
 
   // 1) La vista, si está creada en Supabase.
-  const vista = await db
+  let qv = db
     .from("asesorias_estado")
     .select("id, created_at, order_id, fullname, email, phone, status, paid_at, inicio, vence, estado, dias_restantes")
     .limit(LIMITE);
+  if (filtro) qv = qv.or(filtro);
+  const vista = await qv;
   if (!vista.error && vista.data) {
     const rows = (vista.data as AsesoriaRow[]).sort(
       (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime(),
@@ -128,11 +178,13 @@ export async function getAsesorias(): Promise<AsesoriasResult> {
   }
 
   // 2) Si no, la tabla y la misma regla calculada acá.
-  const { data, error } = await db
+  let qt = db
     .from("advisory_payments")
     .select("id, created_at, order_id, fullname, email, phone, status, paid_at")
     .order("created_at", { ascending: false })
     .limit(LIMITE);
+  if (filtro) qt = qt.or(filtro);
+  const { data, error } = await qt;
   logError("getAsesorias", error);
   const now = Date.now();
   return {
@@ -163,17 +215,20 @@ export interface VendedorRow {
 
 const GANADAS = ["ganadora", "aceptada"];
 
-export async function getVendedores(): Promise<VendedorRow[]> {
+/** Vendedores registrados desde `desde` (o todos). */
+export async function getVendedores(desde: number | null = null): Promise<VendedorRow[]> {
   if (!(await assertAdmin())) return [];
   const db = createServiceClient();
+  let qv = db
+    .from("leads_vendors")
+    .select(
+      "id, created_at, nombre, apellido, email, telefono, nombre_concesionario, comuna, region, marcas, estado, rut_vendors, financiamientos",
+    )
+    .order("created_at", { ascending: false })
+    .limit(LIMITE);
+  if (desde != null) qv = qv.gte("created_at", iso(desde));
   const [{ data: vendedores, error: vErr }, { data: ofertas, error: oErr }] = await Promise.all([
-    db
-      .from("leads_vendors")
-      .select(
-        "id, created_at, nombre, apellido, email, telefono, nombre_concesionario, comuna, region, marcas, estado, rut_vendors, financiamientos",
-      )
-      .order("created_at", { ascending: false })
-      .limit(LIMITE),
+    qv,
     db.from("ofertas").select("vendor_id, estado").limit(LIMITE),
   ]);
   logError("getVendedores", vErr);
@@ -254,14 +309,17 @@ export interface NewsletterRow {
   email: string | null;
 }
 
-export async function getNewsletter(): Promise<NewsletterRow[]> {
+/** Suscripciones desde `desde` (o todas). */
+export async function getNewsletter(desde: number | null = null): Promise<NewsletterRow[]> {
   if (!(await assertAdmin())) return [];
   const db = createServiceClient();
-  const { data, error } = await db
+  let q = db
     .from("newsletter")
     .select("id, created_at, email")
     .order("created_at", { ascending: false })
     .limit(LIMITE);
+  if (desde != null) q = q.gte("created_at", iso(desde));
+  const { data, error } = await q;
   logError("getNewsletter", error);
   return (data ?? []) as NewsletterRow[];
 }
@@ -273,179 +331,77 @@ export interface RatingRow {
   feedback: string | null;
 }
 
-export async function getRatings(): Promise<RatingRow[]> {
+/** Calificaciones del sitio desde `desde` (o todas). */
+export async function getRatings(desde: number | null = null): Promise<RatingRow[]> {
   if (!(await assertAdmin())) return [];
   const db = createServiceClient();
-  const { data, error } = await db
+  let q = db
     .from("rating")
     .select("id, created_at, stars, feedback")
     .order("created_at", { ascending: false })
     .limit(LIMITE);
+  if (desde != null) q = q.gte("created_at", iso(desde));
+  const { data, error } = await q;
   logError("getRatings", error);
   return (data ?? []).map((r) => ({ ...r, stars: r.stars == null ? null : Number(r.stars) })) as RatingRow[];
 }
 
-// ─── Resumen ────────────────────────────────────────────────────────────────
+// ─── Waitlist de vendedores ─────────────────────────────────────────────────
 
-export interface Conteo {
+export interface WaitlistVendedorRow {
+  id: string;
+  created_at: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  punto_venta: string | null;
+  marcas: string | null;
+  region: string | null;
+  comuna: string | null;
+  mensaje: string | null;
+  source: string | null;
+  contacted: boolean | null;
+  notes: string | null;
+}
+
+export interface WaitlistVendedoresResult {
+  rows: WaitlistVendedorRow[];
+  /** false si la tabla todavía no existe en Supabase (migración del 27-sep sin aplicar). */
+  disponible: boolean;
+  /** Totales de hoy, sobre toda la tabla. */
   total: number;
-  ultimos7: number;
-  ultimos30: number;
+  sinContactar: number;
 }
 
-export interface Actividad {
-  tipo: "waitlist" | "asesoria" | "vendedor" | "oferta" | "resena" | "newsletter" | "feedback";
-  titulo: string;
-  detalle: string | null;
-  fecha: string;
-  href: string;
-}
-
-export interface AdminOverview {
-  waitlist: Conteo & { personas: number; sinContactar: number };
-  asesorias: Conteo & { pagadas: number; activas: number; pendientes: number };
-  vendedores: Conteo & { activos: number };
-  leadsOferta: Conteo & { pagados: number };
-  resenas: Conteo & { porModerar: number; publicadas: number };
-  newsletter: Conteo;
-  feedback: Conteo & { promedio: number | null };
-  actividad: Actividad[];
-  generadoEn: number;
-}
-
-function contar(fechas: (string | null)[], now: number): Conteo {
-  let u7 = 0;
-  let u30 = 0;
-  for (const f of fechas) {
-    if (!f) continue;
-    const t = now - new Date(f).getTime();
-    if (t <= 7 * DIA_MS) u7++;
-    if (t <= 30 * DIA_MS) u30++;
-  }
-  return { total: fechas.length, ultimos7: u7, ultimos30: u30 };
-}
-
-export async function getAdminOverview(): Promise<AdminOverview | null> {
-  if (!(await assertAdmin())) return null;
+/**
+ * Vendedores que dejaron sus datos mientras la suscripción está en pausa (tabla
+ * waitlist_vendedores, scripts/sql/2026-09-27_resenas_categorias_y_waitlist_vendedores.sql en
+ * la web). Si la tabla no existe todavía, devuelve `disponible: false` en vez de fallar.
+ */
+export async function getWaitlistVendedores(desde: number | null = null): Promise<WaitlistVendedoresResult> {
+  const vacio = { rows: [], disponible: false, total: 0, sinContactar: 0 };
+  if (!(await assertAdmin())) return vacio;
   const db = createServiceClient();
-  const now = Date.now();
-
-  const [waitlist, asesorias, vendedores, leads, reviews, newsletter, rating] = await Promise.all([
-    db.from("waitlist").select("created_at, first_name, last_name, full_name, email, model, source, contacted").order("created_at", { ascending: false }).limit(LIMITE),
-    getAsesorias(),
-    db.from("leads_vendors").select("created_at, nombre, apellido, nombre_concesionario, estado, region").order("created_at", { ascending: false }).limit(LIMITE),
-    db.from("leads").select("created_at, first_name, last_name, target_model, status").order("created_at", { ascending: false }).limit(LIMITE),
-    db.from("reviews").select("created_at, first_name, car_brand, car_model, rating, status").order("created_at", { ascending: false }).limit(LIMITE),
-    db.from("newsletter").select("created_at").order("created_at", { ascending: false }).limit(LIMITE),
-    db.from("rating").select("created_at, stars, feedback").order("created_at", { ascending: false }).limit(LIMITE),
+  let q = db
+    .from("waitlist_vendedores")
+    .select("id, created_at, first_name, last_name, email, phone, punto_venta, marcas, region, comuna, mensaje, source, contacted, notes")
+    .order("created_at", { ascending: false })
+    .limit(LIMITE);
+  if (desde != null) q = q.gte("created_at", iso(desde));
+  const [full, total, sin] = await Promise.all([
+    q,
+    db.from("waitlist_vendedores").select("id", { count: "exact", head: true }),
+    db.from("waitlist_vendedores").select("id", { count: "exact", head: true }).or("contacted.is.null,contacted.eq.false"),
   ]);
-  logError("overview/waitlist", waitlist.error);
-  logError("overview/vendedores", vendedores.error);
-  logError("overview/leads", leads.error);
-  logError("overview/reviews", reviews.error);
-  logError("overview/newsletter", newsletter.error);
-  logError("overview/rating", rating.error);
-
-  const w = waitlist.data ?? [];
-  const a = asesorias.rows;
-  const v = vendedores.data ?? [];
-  const l = leads.data ?? [];
-  const r = reviews.data ?? [];
-  const n = newsletter.data ?? [];
-  const rt = rating.data ?? [];
-
-  const estrellas = rt.map((x) => Number(x.stars)).filter((x) => !isNaN(x) && x > 0);
-
-  type ActividadCruda = Omit<Actividad, "fecha"> & { fecha: string | null };
-  const crudas: ActividadCruda[] = [
-    ...w.slice(0, 10).map((x) => ({
-      tipo: "waitlist" as const,
-      titulo: x.full_name || [x.first_name, x.last_name].filter(Boolean).join(" ") || x.email || "Persona sin nombre",
-      detalle: x.model ? `Se sumó a la waitlist, le interesa ${x.model}` : "Se sumó a la waitlist",
-      fecha: x.created_at,
-      href: "/admin/waitlist",
-    })),
-    ...a.slice(0, 10).map((x) => ({
-      tipo: "asesoria" as const,
-      titulo: x.fullname || x.email || "Persona sin nombre",
-      detalle: x.estado === "pendiente de pago" ? "Llenó el formulario de la asesoría, pago pendiente" : "Contrató la asesoría",
-      fecha: x.paid_at ?? x.created_at,
-      href: "/admin/asesorias",
-    })),
-    ...v.slice(0, 10).map((x) => ({
-      tipo: "vendedor" as const,
-      titulo: [x.nombre, x.apellido].filter(Boolean).join(" ") || x.nombre_concesionario || "Vendedor sin nombre",
-      detalle: "Se registró como vendedor oficial",
-      fecha: x.created_at,
-      href: "/admin/vendedores",
-    })),
-    ...l.slice(0, 10).map((x) => ({
-      tipo: "oferta" as const,
-      titulo: [x.first_name, x.last_name].filter(Boolean).join(" ") || "Persona sin nombre",
-      detalle: x.target_model ? `Lead de Oferta Exclusiva por ${slugATitulo(x.target_model)}` : "Lead de Oferta Exclusiva",
-      fecha: x.created_at,
-      href: "/admin/leads-oferta",
-    })),
-    ...r.slice(0, 10).map((x) => ({
-      tipo: "resena" as const,
-      titulo: x.first_name || "Persona sin nombre",
-      detalle: `Dejó una reseña${x.car_model ? ` de ${[x.car_brand, x.car_model].filter(Boolean).join(" ")}` : ""}${x.rating ? ` con ${x.rating} de 5` : ""}`,
-      fecha: x.created_at,
-      href: "/admin/resenas",
-    })),
-    ...n.slice(0, 5).map((x) => ({
-      tipo: "newsletter" as const,
-      titulo: "Nueva suscripción al newsletter",
-      detalle: null,
-      fecha: x.created_at,
-      href: "/admin/newsletter",
-    })),
-    ...rt.slice(0, 5).map((x) => ({
-      tipo: "feedback" as const,
-      titulo: `Calificó el sitio con ${Number(x.stars).toLocaleString("es-CL")} de 5`,
-      detalle: x.feedback || null,
-      fecha: x.created_at,
-      href: "/admin/feedback",
-    })),
-  ];
-  const actividad = crudas
-    .filter((x): x is Actividad => !!x.fecha)
-    .sort((x, y) => new Date(y.fecha).getTime() - new Date(x.fecha).getTime())
-    .slice(0, 12);
-
-  const personas = new Set(w.map((x) => (x.email ?? "").trim().toLowerCase()).filter(Boolean)).size;
-
+  if (full.error) {
+    if (!faltaEsquema(full.error)) logError("getWaitlistVendedores", full.error);
+    return vacio;
+  }
   return {
-    waitlist: {
-      ...contar(w.map((x) => x.created_at), now),
-      personas,
-      sinContactar: w.filter((x) => !x.contacted).length,
-    },
-    asesorias: {
-      ...contar(a.map((x) => x.created_at), now),
-      pagadas: a.filter((x) => x.estado === "activa" || x.estado === "vencida").length,
-      activas: a.filter((x) => x.estado === "activa").length,
-      pendientes: a.filter((x) => x.estado === "pendiente de pago").length,
-    },
-    vendedores: {
-      ...contar(v.map((x) => x.created_at), now),
-      activos: v.filter((x) => (x.estado ?? "").toLowerCase() === "activo").length,
-    },
-    leadsOferta: {
-      ...contar(l.map((x) => x.created_at), now),
-      pagados: l.filter((x) => (x.status ?? "").toLowerCase() === "pagado").length,
-    },
-    resenas: {
-      ...contar(r.map((x) => x.created_at), now),
-      porModerar: r.filter((x) => x.status === "pendiente").length,
-      publicadas: r.filter((x) => x.status === "aprobada").length,
-    },
-    newsletter: contar(n.map((x) => x.created_at), now),
-    feedback: {
-      ...contar(rt.map((x) => x.created_at), now),
-      promedio: estrellas.length ? estrellas.reduce((s, x) => s + x, 0) / estrellas.length : null,
-    },
-    actividad,
-    generadoEn: now,
+    rows: (full.data ?? []) as WaitlistVendedorRow[],
+    disponible: true,
+    total: total.count ?? full.data?.length ?? 0,
+    sinContactar: sin.count ?? 0,
   };
 }
