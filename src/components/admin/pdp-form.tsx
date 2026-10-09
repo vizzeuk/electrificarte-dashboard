@@ -36,9 +36,10 @@ function aValores(s?: PdpSolicitud): Valores {
     tipo: s?.tipo ?? "",
     electrificacion: s?.electrificacion ?? "",
     url_oficial: s?.url_oficial ?? "",
+    // Sin versiones por defecto: son opcionales.
     versiones: s?.versiones?.length
       ? s.versiones.map((v) => ({ nombre: v.nombre ?? "", precio: conPuntos(v.precio ?? "") }))
-      : [{ nombre: "", precio: "" }],
+      : [],
   };
 }
 
@@ -46,11 +47,14 @@ function aDatos(v: Valores): PdpDatos {
   return {
     marca: v.marca,
     modelo: v.modelo.trim(),
-    anio: Number(v.anio),
+    anio: v.anio.trim() ? Number(v.anio) : null,
     tipo: v.tipo,
     electrificacion: v.electrificacion,
-    url_oficial: v.url_oficial.trim(),
-    versiones: v.versiones.map((x) => ({ nombre: x.nombre.trim(), precio: sinPuntos(x.precio) })),
+    url_oficial: v.url_oficial.trim() || null,
+    // Una fila agregada y dejada en blanco no cuenta como versión.
+    versiones: v.versiones
+      .filter((x) => x.nombre.trim() || sinPuntos(x.precio) > 0)
+      .map((x) => ({ nombre: x.nombre.trim(), precio: sinPuntos(x.precio) })),
   };
 }
 
@@ -246,7 +250,9 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="pdp-anio">Año</Label>
+              <Label htmlFor="pdp-anio">
+                Año <span className="text-muted-foreground font-normal">(opcional)</span>
+              </Label>
               <Input
                 id="pdp-anio"
                 type="number"
@@ -257,8 +263,8 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
                 placeholder={String(Math.min(new Date().getFullYear(), opciones.anioMax))}
                 aria-invalid={Boolean(errors.anio)}
                 {...register("anio", {
-                  required: "Escribe el año.",
                   validate: (v) => {
+                    if (!v.trim()) return true;
                     const n = Number(v);
                     if (!Number.isInteger(n)) return "El año es un número entero.";
                     if (n < opciones.anioMin || n > opciones.anioMax) return `Entre ${opciones.anioMin} y ${opciones.anioMax}.`;
@@ -323,7 +329,9 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
         <section className="bg-card flex flex-col gap-5 rounded-card border p-5 sm:p-6">
           <h2 className="font-display text-h4 font-bold">Fuente oficial</h2>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="pdp-url">URL oficial</Label>
+            <Label htmlFor="pdp-url">
+              URL oficial <span className="text-muted-foreground font-normal">(opcional)</span>
+            </Label>
             <Input
               id="pdp-url"
               type="url"
@@ -333,8 +341,8 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
               aria-invalid={Boolean(errors.url_oficial)}
               aria-describedby="pdp-url-ayuda"
               {...register("url_oficial", {
-                required: "Pega la URL oficial.",
                 validate: (v) => {
+                  if (!v.trim()) return true;
                   try {
                     return new URL(v.trim()).protocol === "https:" || "Tiene que empezar con https://.";
                   } catch {
@@ -345,8 +353,9 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
             />
             {err(errors.url_oficial?.message)}
             <p id="pdp-url-ayuda" className="text-muted-foreground text-small">
-              Página de precios, configurador o ficha de venta del modelo en el sitio chileno de la marca. Nunca una
-              noticia, nota de prensa o blog.
+              Si la dejas vacía, el agente busca la ficha del modelo dentro del sitio oficial de la marca. Si la pones, que
+              sea la página de precios, configurador o ficha de venta en el sitio chileno de la marca; nunca una noticia,
+              nota de prensa o blog.
             </p>
             {sitio && (
               <p className="text-small">
@@ -363,10 +372,13 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
         {/* Versiones */}
         <section className="bg-card flex flex-col gap-5 rounded-card border p-5 sm:p-6">
           <div className="flex flex-col gap-1">
-            <h2 className="font-display text-h4 font-bold">Versiones</h2>
+            <h2 className="font-display text-h4 font-bold">
+              Versiones <span className="text-muted-foreground text-body font-normal">(opcional)</span>
+            </h2>
             <p className="text-muted-foreground text-small">
-              Un modelo es una PDP: las versiones van adentro. El precio lo pones tú, no la IA: la IA solo lo compara con
-              la fuente y avisa si no calza.
+              Un modelo es una PDP: las versiones van adentro. Si las pones con su precio, ese precio manda y la IA solo
+              avisa si la fuente dice otra cosa. Si no pones ninguna, el precio se toma de la fuente oficial (con su cita) y
+              lo confirmas en Studio antes de publicar.
             </p>
           </div>
 
@@ -424,7 +436,6 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
                       variant="ghost"
                       size="sm"
                       onClick={() => versiones.remove(i)}
-                      disabled={versiones.fields.length === 1}
                       aria-label={`Quitar la versión ${i + 1}`}
                       className="cursor-pointer sm:size-12 sm:px-0"
                     >

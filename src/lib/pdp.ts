@@ -33,10 +33,13 @@ export interface PdpOpciones {
 export interface PdpDatos {
   marca: string;
   modelo: string;
-  anio: number;
+  /** Opcional (oct-2026): null = no declarado. */
+  anio: number | null;
   tipo: string;
   electrificacion: string;
-  url_oficial: string;
+  /** Opcional: null = el agente busca la ficha en el sitio oficial de la marca. */
+  url_oficial: string | null;
+  /** Opcional: [] = el precio sale de la fuente oficial (con cita) y se confirma en Studio. */
   versiones: PdpVersion[];
 }
 
@@ -44,7 +47,7 @@ export interface PdpSolicitud {
   id: string;
   marca: string;
   modelo: string;
-  anio: number;
+  anio: number | null;
   /** La web devuelve la fila completa de `pdp_solicitudes`: estos se usan para "Corregir". */
   tipo?: string | null;
   electrificacion?: string | null;

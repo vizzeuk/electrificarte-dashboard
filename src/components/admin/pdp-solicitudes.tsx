@@ -18,7 +18,9 @@ const INTERVALO = 15_000;
 
 function Versiones({ s }: { s: PdpSolicitud }) {
   const vs = s.versiones ?? [];
-  if (vs.length === 0) return null;
+  if (vs.length === 0) {
+    return <p className="text-muted-foreground text-small">Sin versiones declaradas: el precio se toma de la fuente oficial.</p>;
+  }
   const precios = vs.map((v) => v.precio).filter((p) => p > 0);
   const desde = precios.length ? Math.min(...precios) : null;
   return (

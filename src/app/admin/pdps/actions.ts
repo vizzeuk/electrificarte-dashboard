@@ -25,20 +25,23 @@ function limpiar(d: Partial<PdpDatos>, parcial: boolean): { datos: Partial<PdpDa
   if (req("modelo")) { datos.modelo = texto(d.modelo, 120); if (!datos.modelo) errores.push("Falta el modelo."); }
   if (req("tipo")) { datos.tipo = texto(d.tipo, 80); if (!datos.tipo) errores.push("Falta el tipo."); }
   if (req("electrificacion")) { datos.electrificacion = texto(d.electrificacion, 20); if (!datos.electrificacion) errores.push("Falta la electrificación."); }
+  // Año, URL y versiones son opcionales (oct-2026): vacíos van como null / null / [].
   if (req("anio")) {
-    datos.anio = Number(d.anio);
-    if (!Number.isInteger(datos.anio)) errores.push("El año tiene que ser un número entero.");
+    const vacio = d.anio == null || String(d.anio).trim() === "";
+    datos.anio = vacio ? null : Number(d.anio);
+    if (!vacio && !Number.isInteger(datos.anio)) errores.push("El año tiene que ser un número entero.");
   }
   if (req("url_oficial")) {
-    datos.url_oficial = texto(d.url_oficial, 2000);
-    let okUrl = false;
-    try { okUrl = new URL(datos.url_oficial).protocol === "https:"; } catch {}
-    if (!okUrl) errores.push("La URL oficial tiene que empezar con https://.");
+    datos.url_oficial = texto(d.url_oficial, 2000) || null;
+    if (datos.url_oficial) {
+      let okUrl = false;
+      try { okUrl = new URL(datos.url_oficial).protocol === "https:"; } catch {}
+      if (!okUrl) errores.push("La URL oficial tiene que empezar con https://.");
+    }
   }
   if (req("versiones")) {
     const vs = Array.isArray(d.versiones) ? d.versiones : [];
     datos.versiones = vs.slice(0, 40).map((v) => ({ nombre: texto(v?.nombre, 120), precio: Number(v?.precio) }));
-    if (datos.versiones.length === 0) errores.push("Agrega al menos una versión.");
     if (datos.versiones.some((v) => !v.nombre)) errores.push("Cada versión necesita un nombre.");
     if (datos.versiones.some((v) => !Number.isInteger(v.precio) || v.precio <= 0)) errores.push("Cada versión necesita un precio en pesos mayor a 0.");
   }

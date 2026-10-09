@@ -83,13 +83,14 @@ const studio = (id) => `https://www.electrificarte.com/studio/structure/auto;${i
 function terminal(s) {
   const m = s.modelo.toLowerCase();
   if (m.includes("error")) return "error";
-  if (m.includes("sin datos") || /noticia|blog|prensa/.test(s.url_oficial)) return "sin_datos";
+  if (m.includes("sin datos") || /noticia|blog|prensa/.test(s.url_oficial ?? "")) return "sin_datos";
   return alterna++ % 2 === 0 ? "listo_para_revisar" : "borrador_incompleto";
 }
 
 function cerrar(s, estado, at) {
-  const nombre = `${s.marca} ${s.modelo} ${s.anio}`;
-  const base = Math.min(...s.versiones.map((v) => v.precio));
+  const nombre = [s.marca, s.modelo, s.anio].filter(Boolean).join(" ");
+  // Sin versiones declaradas, el precio "sale de la fuente" (como la web real).
+  const base = s.versiones.length ? Math.min(...s.versiones.map((v) => v.precio)) : 25990000;
   const precio = `$${base.toLocaleString("es-CL")}`;
   s.estado = estado;
   s.terminada_at = iso(at);
@@ -186,16 +187,17 @@ function validar(d, parcial = false) {
     else if (d.marca === "Zzz" || !MARCAS.some((m) => m.valor === d.marca)) errores.push(`La marca ${d.marca} no existe en Sanity. Créala primero en Studio.`);
   }
   if (has("modelo") && !String(d.modelo ?? "").trim()) errores.push("Falta el modelo.");
-  if (has("anio") && (!Number.isInteger(d.anio) || d.anio < OPCIONES.anioMin || d.anio > OPCIONES.anioMax)) errores.push(`El año tiene que estar entre ${OPCIONES.anioMin} y ${OPCIONES.anioMax}.`);
+  // Año, URL y versiones son opcionales (oct-2026), igual que en la web real.
+  if (has("anio") && d.anio != null && (!Number.isInteger(d.anio) || d.anio < OPCIONES.anioMin || d.anio > OPCIONES.anioMax)) errores.push(`El año tiene que estar entre ${OPCIONES.anioMin} y ${OPCIONES.anioMax}.`);
   if (has("tipo") && !OPCIONES.tipos.some((t) => t.valor === d.tipo)) errores.push(`El tipo "${d.tipo ?? ""}" no existe en Sanity.`);
   if (has("electrificacion") && !OPCIONES.electrificaciones.some((e) => e.valor === d.electrificacion)) errores.push(`La electrificación "${d.electrificacion ?? ""}" no es válida.`);
-  if (has("url_oficial")) {
+  if (has("url_oficial") && d.url_oficial) {
     const u = String(d.url_oficial ?? "");
     if (!u.startsWith("https://")) errores.push("La URL oficial tiene que empezar con https://.");
     else if (u.includes("404")) errores.push("La URL responde 404. Revisa que sea la página del modelo.");
   }
   if (has("versiones")) {
-    if (!Array.isArray(d.versiones) || d.versiones.length === 0) errores.push("Falta al menos una versión.");
+    if (!Array.isArray(d.versiones)) errores.push("versiones tiene que ser una lista.");
     else if (d.versiones.some((v) => !v?.nombre || !Number.isInteger(v?.precio) || v.precio <= 0)) errores.push("Cada versión necesita nombre y precio en pesos mayor a 0.");
   }
   if (has("modelo") && /^ya existe/i.test(String(d.modelo ?? ""))) errores.push(`Ya existe una PDP con el slug "${String(d.modelo).toLowerCase().replace(/\W+/g, "-")}".`);
