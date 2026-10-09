@@ -45,7 +45,7 @@ export interface PdpSolicitud {
   marca: string;
   modelo: string;
   anio: number;
-  /** El contrato no los lista para la vista, pero la fila los guarda: se usan para "Corregir". */
+  /** La web devuelve la fila completa de `pdp_solicitudes`: estos se usan para "Corregir". */
   tipo?: string | null;
   electrificacion?: string | null;
   url_oficial?: string | null;
@@ -58,7 +58,7 @@ export interface PdpSolicitud {
   costo_usd?: number | null;
   creado_por?: string | null;
   created_at: string;
-  /** Si la web lo manda, marca el último cambio de estado (para la regla de los 30 min). */
+  /** Último cambio de la fila (trigger en Supabase): la web cuenta los 30 min desde acá. */
   updated_at?: string | null;
   terminada_at?: string | null;
   intentos?: number | null;
@@ -87,13 +87,8 @@ export const ESTADOS: Record<PdpEstado, { label: string; variant: "default" | "s
 
 export const ORDEN_ESTADOS = Object.keys(ESTADOS) as PdpEstado[];
 
-/** Estados que el contrato no nombra pero la web podría usar (p. ej. al cancelar). */
-const OTROS: Record<string, (typeof ESTADOS)[PdpEstado]> = {
-  cancelada: { label: "Cancelada", variant: "secondary" },
-};
-
 export function estadoInfo(estado: string) {
-  const conocido = ESTADOS[estado as PdpEstado] ?? OTROS[estado];
+  const conocido = ESTADOS[estado as PdpEstado];
   if (conocido) return conocido;
   const t = (estado || "sin estado").replace(/_/g, " ");
   return { label: t.charAt(0).toLocaleUpperCase("es-CL") + t.slice(1), variant: "outline" as const };
@@ -106,7 +101,7 @@ export const esActiva = (s: Pick<PdpSolicitud, "estado">) => ESTADOS_ACTIVOS.inc
 
 const TREINTA_MIN = 30 * 60_000;
 
-/** Último movimiento conocido de la solicitud (el contrato no define un campo propio). */
+/** Último movimiento de la solicitud: misma regla que `sePuedeReintentar` en la web (updated_at). */
 function ultimoMovimiento(s: PdpSolicitud): number {
   const t = new Date(s.updated_at ?? s.created_at).getTime();
   return isNaN(t) ? Date.now() : t;
@@ -123,7 +118,10 @@ export interface Acciones {
 
 export function accionesDe(s: PdpSolicitud, now: number): Acciones {
   const pegada = (s.estado === "en cola" || s.estado === "procesando") && now - ultimoMovimiento(s) > TREINTA_MIN;
-  const fallida = s.estado === "sin_datos" || s.estado === "error";
+  // Mismos estados que acepta /reintentar en la web (lib/pdp-creacion/solicitudes.ts). "rechazada"
+  // suele ser que la PDP ya existe en Sanity: reintentar sin corregir vuelve a fallar, pero
+  // corrigiendo el modelo sí puede servir.
+  const fallida = s.estado === "sin_datos" || s.estado === "error" || s.estado === "rechazada";
   return {
     cancelar: s.estado === "listo",
     reintentar: pegada || fallida,

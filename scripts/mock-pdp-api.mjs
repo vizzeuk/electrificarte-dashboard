@@ -29,9 +29,9 @@
 //                                            o la URL: "error" → error; URL con "noticia"/"blog"
 //                                            o modelo con "sin datos" → sin_datos; si no,
 //                                            alterna listo_para_revisar / borrador_incompleto.
-// - POST /api/admin/pdp/solicitudes/reintentar {id, cambios?} → 200 en sin_datos/error o
+// - POST /api/admin/pdp/solicitudes/reintentar {id, cambios?} → 200 en sin_datos/error/rechazada o
 //                                            en cola/procesando con más de 30 min; si no, 409.
-// - POST /api/admin/pdp/solicitudes/cancelar {id} → 200 solo en "listo" (queda "cancelada");
+// - POST /api/admin/pdp/solicitudes/cancelar {id} → 200 solo en "listo" (borra la fila, como la web);
 //                                            si no, 409.
 // - GET  /__stats (sin secreto)           → cuántas veces se llamó cada ruta (para los tests).
 // - POST /__reset (sin secreto)           → vuelve a la semilla y pone los contadores en 0.
@@ -273,7 +273,7 @@ const server = http.createServer(async (req, res) => {
     if (!s) { log(404); return send(res, 404, { ok: false, errores: ["No existe esa solicitud."] }); }
     await sleep(800);
     const pegada = ["en cola", "procesando"].includes(s.estado) && now - new Date(s.updated_at).getTime() > 30 * MIN;
-    if (!(["sin_datos", "error"].includes(s.estado) || pegada)) {
+    if (!(["sin_datos", "error", "rechazada"].includes(s.estado) || pegada)) {
       log(409);
       return send(res, 409, { ok: false, errores: [`No se puede reintentar una solicitud en estado "${s.estado}".`] });
     }
@@ -293,10 +293,11 @@ const server = http.createServer(async (req, res) => {
     const d = await leer(req);
     const s = db.find((x) => x.id === d?.id);
     if (!s) { log(404); return send(res, 404, { ok: false, errores: ["No existe esa solicitud."] }); }
-    if (s.estado !== "listo") { log(409); return send(res, 409, { ok: false, errores: ["El flujo ya la tomó: no se puede cancelar."] }); }
-    Object.assign(s, { estado: "cancelada", detalle: "Cancelada desde el panel.", terminada_at: iso(now), updated_at: iso(now) });
+    if (s.estado !== "listo") { log(409); return send(res, 409, { ok: false, errores: ["Ya la tomó el flujo (o no existe): no se puede cancelar"] }); }
+    // Igual que la web real: borra la fila (no hay estado "cancelada").
+    db = db.filter((x) => x.id !== s.id);
     log(200);
-    return send(res, 200, { ok: true, solicitud: publica(s) });
+    return send(res, 200, { ok: true });
   }
 
   log(404);
