@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  CarFront,
   LayoutDashboard,
   ListChecks,
   Mail,
@@ -40,6 +41,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Contenido",
     items: [
+      { title: "PDPs", url: "/admin/pdps", icon: CarFront },
       { title: "Reseñas", url: "/admin/resenas", icon: Star },
       { title: "Analítica del sitio", url: "/admin/analitica", icon: BarChart3, note: "De prueba" },
     ],
