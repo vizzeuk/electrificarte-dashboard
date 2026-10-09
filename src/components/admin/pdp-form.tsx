@@ -453,7 +453,7 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
         </section>
       </fieldset>
 
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
           {isSubmitting ? (
             <>

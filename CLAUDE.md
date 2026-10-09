@@ -13,7 +13,7 @@ Panel interno de Electrificarte: vista **Admin** (Francisco) y vista **Vendedor*
 - **Admin: datos reales de Supabase, solo lectura** (salvo moderar reseñas). Todo se lee con
   service role en el servidor (`src/lib/data/admin-data.ts`, `reviews-data.ts`), detrás de
   `getAdminEmail()`. Secciones: Resumen, Waitlist, Asesorías, Newsletter, Feedback del sitio,
-  Vendedores, Waitlist de vendedores, Leads Oferta (en pausa), Reseñas.
+  Vendedores, Waitlist de vendedores, Leads Oferta (en pausa), Reseñas. **PDPs** no lee Supabase: habla con la web (ver abajo).
 - **Período (vista BI):** vive en la URL (`?periodo=7d|30d|90d|12m|todo`, o `?desde=&hasta=`
   AAAA-MM-DD, más `?agrupar=dia|semana|mes`), en hora de Chile. `lib/periodo.ts` lo resuelve
   (y el período anterior de igual largo para las variaciones); `lib/series.ts` agrupa y compara.
@@ -26,6 +26,29 @@ Panel interno de Electrificarte: vista **Admin** (Francisco) y vista **Vendedor*
   27-sep en la web) se leen con reintento sin columnas / aviso si la tabla no existe.
 - **Analítica del sitio: mock** (`src/lib/mock/`). En el admin se rotula "Datos de prueba".
 - Vista vendedor: pool, ofertas y cuenta desde Supabase (RLS); tips y analítica, mock.
+
+## PDPs (crear fichas desde el panel)
+
+`/admin/pdps` (lista "PDPs en creación") · `/admin/pdps/nueva` · `/admin/pdps/[id]/corregir`.
+Contrato: "Crear PDPs desde el panel" de la web (la web es dueña de la validación, la cola y
+la escritura en Sanity; el panel solo muestra formulario y lista).
+
+- **Consume** `GET /api/admin/pdp/opciones` (cache en memoria 5 min), `GET|POST
+  /api/admin/pdp/solicitudes`, `POST …/solicitudes/reintentar` (con `cambios` = solo lo que
+  cambió) y `POST …/solicitudes/cancelar`.
+- **Solo servidor:** `src/lib/pdp-api.ts` (`server-only`) es el único que lleva el header
+  `x-admin-secret`; las server actions de `app/admin/pdps/actions.ts` validan `getAdminEmail()`
+  antes de llamar. `creado_por` lo pone el servidor con el correo de la sesión.
+  `redirect: "manual"`: un 3xx se informa como error de configuración (la base va con www).
+- **Variables:** las mismas de reseñas, `ELECTRIFICARTE_API_BASE` (default
+  `https://www.electrificarte.com`) y `ADMIN_API_SECRET` (el de Vercel). No hay variables nuevas.
+- **Refresco:** cada 15 s solo mientras haya alguna en `listo`/`en cola`/`procesando` y la
+  pestaña esté visible; al volver a la pestaña consulta una vez. Tipos y reglas por estado
+  (etiquetas, qué acción va en cada uno, la regla de los 30 min) en `src/lib/pdp.ts`.
+- **Mock local** (los endpoints de la web aún no están desplegados):
+  `node scripts/mock-pdp-api.mjs` (puerto 3401, secreto `mock-secreto-pdp`; el encabezado
+  explica los gatillos para forzar 422/409/avisos) y en otra terminal
+  `ELECTRIFICARTE_API_BASE=http://localhost:3401 ADMIN_API_SECRET=mock-secreto-pdp npx next dev --webpack -p 3001`.
 
 ## Stack
 

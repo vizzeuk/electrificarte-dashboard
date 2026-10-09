@@ -72,7 +72,7 @@ function Fila({
             </Badge>
           </div>
           {s.detalle && (
-            <p className="text-muted-foreground truncate text-small" title={s.detalle}>
+            <p className="text-muted-foreground line-clamp-2 text-small sm:line-clamp-1" title={s.detalle}>
               {s.detalle}
             </p>
           )}
