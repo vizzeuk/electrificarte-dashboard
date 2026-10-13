@@ -41,7 +41,17 @@ function limpiar(d: Partial<PdpDatos>, parcial: boolean): { datos: Partial<PdpDa
   }
   if (req("versiones")) {
     const vs = Array.isArray(d.versiones) ? d.versiones : [];
-    datos.versiones = vs.slice(0, 40).map((v) => ({ nombre: texto(v?.nombre, 120), precio: Number(v?.precio) }));
+    datos.versiones = vs.slice(0, 40).map((v) => {
+      // Tipo/electrificación por versión: opcionales; si van vacíos, la clave no se manda.
+      const tipo = texto(v?.tipo, 80);
+      const electrificacion = texto(v?.electrificacion, 20);
+      return {
+        nombre: texto(v?.nombre, 120),
+        precio: Number(v?.precio),
+        ...(tipo ? { tipo } : {}),
+        ...(electrificacion ? { electrificacion } : {}),
+      };
+    });
     if (datos.versiones.some((v) => !v.nombre)) errores.push("Cada versión necesita un nombre.");
     if (datos.versiones.some((v) => !Number.isInteger(v.precio) || v.precio <= 0)) errores.push("Cada versión necesita un precio en pesos mayor a 0.");
   }

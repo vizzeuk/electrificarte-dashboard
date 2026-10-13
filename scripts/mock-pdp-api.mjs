@@ -17,7 +17,9 @@
 // - GET  /api/admin/pdp/opciones          → 10 marcas reales + "Zzz" (aparece en el select pero
 //                                            el POST la rechaza: sirve para probar el 422).
 // - POST /api/admin/pdp/solicitudes       → 422 si la marca no existe o es "Zzz", la URL no es
-//                                            https, la URL contiene "404", o faltan campos;
+//                                            https, la URL contiene "404", faltan campos, o una
+//                                            versión trae tipo "Van" / un tipo o electrificación
+//                                            que no existe (errores por versión, como la web);
 //                                            409 si hay una activa (listo/en cola/procesando) de
 //                                            la misma marca+modelo+año; 201 si no. Tarda ~1,2 s
 //                                            (4 s si el modelo contiene "lento"). Avisos: si la
@@ -128,6 +130,14 @@ function avanzar(s, now = Date.now()) {
   }
 }
 
+/** Igual que la web: tipo/electrificación por versión se guardan solo si difieren del modelo. */
+const soloDistintas = (vs, m) =>
+  vs.map(({ tipo, electrificacion, ...v }) => ({
+    ...v,
+    ...(tipo && tipo !== m.tipo ? { tipo } : {}),
+    ...(electrificacion && electrificacion !== m.electrificacion ? { electrificacion } : {}),
+  }));
+
 function nueva(d, extra = {}) {
   const now = Date.now();
   return {
@@ -138,7 +148,7 @@ function nueva(d, extra = {}) {
     tipo: d.tipo,
     electrificacion: d.electrificacion,
     url_oficial: d.url_oficial,
-    versiones: d.versiones,
+    versiones: soloDistintas(d.versiones ?? [], d),
     estado: "listo",
     detalle: "En espera de que n8n la tome.",
     mensaje: null,
@@ -166,6 +176,7 @@ function semilla() {
     else { s.estado = estado; s._pegada = true; s.detalle = "El agente está leyendo la ficha oficial y armando el borrador."; }
     db.push(s);
   };
+  ej({ marca: "Peugeot", modelo: "3008", anio: 2026, tipo: "SUV", electrificacion: "HEV", url_oficial: "https://www.peugeot.cl/3008/", versiones: [{ nombre: "3008 Hybrid Allure", precio: 31990000 }, { nombre: "E-3008 GT", precio: 41490000, electrificacion: "EV" }] }, "sin_datos", 900);
   ej({ marca: "Kia", modelo: "EV3", anio: 2026, url_oficial: "https://www.kia.cl/modelos/ev3/", versiones: [{ nombre: "EV3 Light", precio: 29990000 }, { nombre: "EV3 GT-Line", precio: 34990000 }] }, "listo_para_revisar", 180);
   ej({ marca: "BYD", modelo: "Sealion 7", anio: 2026, url_oficial: "https://www.byd.cl/sealion-7/", versiones: [{ nombre: "Sealion 7 Comfort", precio: 39990000 }] }, "borrador_incompleto", 600, { creado_por: "matias@electrificarte.com", intentos: 2 });
   ej({ marca: "MG", modelo: "S5 EV", anio: 2025, url_oficial: "https://www.mgmotor.cl/noticias/lanzamiento-s5", versiones: [{ nombre: "S5 EV Comfort", precio: 24990000 }] }, "sin_datos", 1500);
@@ -198,7 +209,14 @@ function validar(d, parcial = false) {
   }
   if (has("versiones")) {
     if (!Array.isArray(d.versiones)) errores.push("versiones tiene que ser una lista.");
-    else if (d.versiones.some((v) => !v?.nombre || !Number.isInteger(v?.precio) || v.precio <= 0)) errores.push("Cada versión necesita nombre y precio en pesos mayor a 0.");
+    else {
+      if (d.versiones.some((v) => !v?.nombre || !Number.isInteger(v?.precio) || v.precio <= 0)) errores.push("Cada versión necesita nombre y precio en pesos mayor a 0.");
+      // Tipo/electrificación por versión (opcionales). Para probar el 422: elegir "Van" en una versión.
+      for (const v of d.versiones) {
+        if (v?.tipo != null && (v.tipo === "Van" || !OPCIONES.tipos.some((t) => t.valor === v.tipo))) errores.push(`El tipo de vehiculo "${v.tipo}" de la version "${v.nombre}" no existe en Sanity`);
+        if (v?.electrificacion != null && !OPCIONES.electrificaciones.some((e) => e.valor === v.electrificacion)) errores.push(`La electrificacion "${v.electrificacion}" de la version "${v.nombre}" no existe en Sanity`);
+      }
+    }
   }
   if (has("modelo") && /^ya existe/i.test(String(d.modelo ?? ""))) errores.push(`Ya existe una PDP con el slug "${String(d.modelo).toLowerCase().replace(/\W+/g, "-")}".`);
   return errores;
@@ -286,6 +304,7 @@ const server = http.createServer(async (req, res) => {
       estado: "listo", detalle: "En espera de que n8n la tome.", mensaje: null, studio_url: null, lote: null,
       terminada_at: null, costo_usd: null, updated_at: iso(now), intentos: (s.intentos ?? 1) + 1, _t0: now, _pegada: false, _final: undefined,
     });
+    s.versiones = soloDistintas(s.versiones ?? [], s);
     console.log("  cambios:", JSON.stringify(cambios));
     log(200);
     return send(res, 200, { ok: true, solicitud: publica(s) });

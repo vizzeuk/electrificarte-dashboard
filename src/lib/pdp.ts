@@ -19,6 +19,13 @@ export interface PdpVersion {
   nombre: string;
   /** Pesos chilenos, entero. Precio de lista, sin bonos. */
   precio: number;
+  /**
+   * Opcionales: solo cuando la versión es de otra carrocería o electrificación que el modelo
+   * (ej. la versión EV de un modelo híbrido). Mismos `valor` de `/opciones`. "Igual que el
+   * modelo" = la clave no va (ni "" ni null); la web los guarda solo si difieren del modelo.
+   */
+  tipo?: string | null;
+  electrificacion?: string | null;
 }
 
 export interface PdpOpciones {
@@ -147,6 +154,19 @@ export function sinPuntos(s: string): number {
   const d = s.replace(/\D/g, "");
   return d ? Number(d) : NaN;
 }
+
+/**
+ * Precio "desde" de la PDP, misma regla que la web: la versión más barata **de la electrificación
+ * del modelo** (una de otra tecnología no cuenta aunque sea más barata). Sin precios → null.
+ */
+export function precioBase(versiones: Pick<PdpVersion, "precio" | "electrificacion">[], electrificacionModelo?: string | null): number | null {
+  const delModelo = versiones.filter((v) => v.precio > 0 && (!v.electrificacion || v.electrificacion === electrificacionModelo));
+  return delModelo.length ? Math.min(...delModelo.map((v) => v.precio)) : null;
+}
+
+/** Lo que la versión tiene distinto del modelo, para mostrarlo junto al nombre: "EV, SUV". */
+export const diferenciasVersion = (v: Pick<PdpVersion, "tipo" | "electrificacion">) =>
+  [v.electrificacion, v.tipo].filter(Boolean).join(", ");
 
 const USD = new Intl.NumberFormat("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export function formatUsd(v: number | null | undefined): string | null {

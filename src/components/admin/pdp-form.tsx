@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Check, ChevronsUpDown, CircleAlert, ExternalLink, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, CircleAlert, ExternalLink, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { crearPdp, reintentarPdp } from "@/app/admin/pdps/actions";
-import { conPuntos, sinPuntos, type PdpDatos, type PdpOpciones, type PdpResultado, type PdpSolicitud } from "@/lib/pdp";
+import { conPuntos, precioBase, sinPuntos, type PdpDatos, type PdpOpciones, type PdpResultado, type PdpSolicitud } from "@/lib/pdp";
 import { cn, formatCLP } from "@/lib/utils";
 
 type Valores = {
@@ -23,8 +23,13 @@ type Valores = {
   tipo: string;
   electrificacion: string;
   url_oficial: string;
-  versiones: { nombre: string; precio: string }[];
+  /** tipo/electrificacion: IGUAL = "Igual que el modelo" (no se manda). */
+  versiones: { nombre: string; precio: string; tipo: string; electrificacion: string }[];
 };
+
+/** Valor del select para "Igual que el modelo" (Radix no acepta "" como valor de un ítem). */
+const IGUAL = "__igual__";
+const VERSION_VACIA = { nombre: "", precio: "", tipo: IGUAL, electrificacion: IGUAL };
 
 type ErrorServidor = Extract<PdpResultado<unknown>, { ok: false }>;
 
@@ -38,7 +43,12 @@ function aValores(s?: PdpSolicitud): Valores {
     url_oficial: s?.url_oficial ?? "",
     // Sin versiones por defecto: son opcionales.
     versiones: s?.versiones?.length
-      ? s.versiones.map((v) => ({ nombre: v.nombre ?? "", precio: conPuntos(v.precio ?? "") }))
+      ? s.versiones.map((v) => ({
+          nombre: v.nombre ?? "",
+          precio: conPuntos(v.precio ?? ""),
+          tipo: v.tipo || IGUAL,
+          electrificacion: v.electrificacion || IGUAL,
+        }))
       : [],
   };
 }
@@ -54,7 +64,13 @@ function aDatos(v: Valores): PdpDatos {
     // Una fila agregada y dejada en blanco no cuenta como versión.
     versiones: v.versiones
       .filter((x) => x.nombre.trim() || sinPuntos(x.precio) > 0)
-      .map((x) => ({ nombre: x.nombre.trim(), precio: sinPuntos(x.precio) })),
+      .map((x) => ({
+        nombre: x.nombre.trim(),
+        precio: sinPuntos(x.precio),
+        // "Igual que el modelo" o igual al del modelo → la clave no va (ni "" ni null).
+        ...(x.tipo !== IGUAL && x.tipo !== v.tipo ? { tipo: x.tipo } : {}),
+        ...(x.electrificacion !== IGUAL && x.electrificacion !== v.electrificacion ? { electrificacion: x.electrificacion } : {}),
+      })),
   };
 }
 
@@ -95,8 +111,27 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
   const versiones = useFieldArray({ control, name: "versiones" });
 
   const marca = watch("marca");
-  const precios = watch("versiones").map((v) => sinPuntos(v.precio)).filter((n) => n > 0);
-  const base = precios.length ? Math.min(...precios) : null;
+  const electrificacionModelo = watch("electrificacion");
+  const filas = watch("versiones");
+  const base = precioBase(
+    filas.map((v) => ({ precio: sinPuntos(v.precio), electrificacion: v.electrificacion === IGUAL ? null : v.electrificacion })),
+    electrificacionModelo,
+  );
+  // La versión más barata es de otra electrificación: el "desde" no la toma (regla de la web).
+  const baseIgnoraUna = base != null && filas.some((v) => sinPuntos(v.precio) > 0 && sinPuntos(v.precio) < base);
+  // Fila con la parte "Distinta carrocería o electrificación" abierta (las que ya traen valor, abiertas).
+  const [distintas, setDistintas] = useState<Set<string>>(new Set());
+  // Si una opción guardada ya no está en Sanity, igual se muestra para que se vea qué falló.
+  const conGuardado = <T extends { valor: string }>(lista: T[], guardados: (string | null | undefined)[], extra: (v: string) => T) => [
+    ...[...new Set(guardados.filter((g): g is string => Boolean(g) && !lista.some((x) => x.valor === g)))].map(extra),
+    ...lista,
+  ];
+  const tiposVersion = conGuardado(opciones.tipos, solicitud?.versiones?.map((v) => v.tipo) ?? [], (valor) => ({ valor, slug: "" }));
+  const electrificacionesVersion = conGuardado(
+    opciones.electrificaciones,
+    solicitud?.versiones?.map((v) => v.electrificacion) ?? [],
+    (valor) => ({ valor, nombre: valor }),
+  );
   const sitio = opciones.marcas.find((m) => m.valor === marca)?.sitio;
   // Si la marca original ya no está en Sanity, igual se muestra para que se vea qué falló.
   const marcas = opciones.marcas.some((m) => m.valor === solicitud?.marca) || !solicitud?.marca
@@ -385,8 +420,11 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
           <ul className="flex flex-col gap-4">
             {versiones.fields.map((f, i) => {
               const e = errors.versiones?.[i];
+              const fila = filas[i];
+              const conValor = Boolean(fila) && (fila.tipo !== IGUAL || fila.electrificacion !== IGUAL);
+              const abierta = conValor || distintas.has(f.id);
               return (
-                <li key={f.id} className="grid gap-3 border-b pb-4 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-start sm:border-b-0 sm:pb-0">
+                <li key={f.id} className="grid gap-3 border-b pb-4 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-start">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor={`pdp-v${i}-nombre`} className={cn(i > 0 && "sm:sr-only")}>
                       Nombre de la versión
@@ -443,20 +481,96 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
                       <span className="sm:sr-only">Quitar</span>
                     </Button>
                   </div>
+                  <div className="flex flex-col gap-3 sm:col-span-3">
+                    {!conValor && (
+                      <button
+                        type="button"
+                        aria-expanded={abierta}
+                        aria-controls={`pdp-v${i}-distinta`}
+                        onClick={() =>
+                          setDistintas((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(f.id)) next.delete(f.id);
+                            else next.add(f.id);
+                            return next;
+                          })
+                        }
+                        className="text-link inline-flex cursor-pointer items-center gap-1 self-start text-small font-semibold underline-offset-4 hover:underline"
+                      >
+                        Distinta carrocería o electrificación
+                        <ChevronDown className={cn("size-4 transition-transform", abierta && "rotate-180")} strokeWidth={1.5} aria-hidden />
+                      </button>
+                    )}
+                    {abierta && (
+                      <div id={`pdp-v${i}-distinta`} className="flex flex-col gap-2">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="flex flex-col gap-2">
+                            <Label htmlFor={`pdp-v${i}-tipo`}>Carrocería de la versión</Label>
+                            <Controller
+                              control={control}
+                              name={`versiones.${i}.tipo`}
+                              render={({ field }) => (
+                                <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
+                                  <SelectTrigger id={`pdp-v${i}-tipo`} className="w-full" onBlur={field.onBlur}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={IGUAL}>Igual que el modelo</SelectItem>
+                                    {tiposVersion.map((t) => (
+                                      <SelectItem key={t.valor} value={t.valor}>
+                                        {t.valor}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Label htmlFor={`pdp-v${i}-electrificacion`}>Electrificación de la versión</Label>
+                            <Controller
+                              control={control}
+                              name={`versiones.${i}.electrificacion`}
+                              render={({ field }) => (
+                                <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
+                                  <SelectTrigger id={`pdp-v${i}-electrificacion`} className="w-full" onBlur={field.onBlur}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={IGUAL}>Igual que el modelo</SelectItem>
+                                    {electrificacionesVersion.map((x) => (
+                                      <SelectItem key={x.valor} value={x.valor}>
+                                        {x.nombre}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground text-small">
+                          Solo si esta versión es de otra tecnología o carrocería que el modelo (ej. la versión eléctrica de un
+                          modelo híbrido). El tipo y la electrificación del modelo son los principales.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </li>
               );
             })}
           </ul>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button type="button" variant="outline" size="sm" onClick={() => versiones.append({ nombre: "", precio: "" })} className="cursor-pointer">
+            <Button type="button" variant="outline" size="sm" onClick={() => versiones.append({ ...VERSION_VACIA })} className="cursor-pointer">
               <Plus strokeWidth={1.5} aria-hidden /> Agregar versión
             </Button>
             <p className="text-muted-foreground text-small">
               Precio de lista, no el precio con bonos.
               {base != null && (
                 <>
-                  {" "}Precio base de la PDP: <span className="text-foreground font-semibold tabular-nums">{formatCLP(base)}</span>, el más bajo.
+                  {" "}Precio base de la PDP: <span className="text-foreground font-semibold tabular-nums">{formatCLP(base)}</span>,
+                  {baseIgnoraUna ? " el más bajo de la electrificación del modelo." : " el más bajo."}
                 </>
               )}
             </p>
