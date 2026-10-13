@@ -45,6 +45,11 @@ la escritura en Sanity; el panel solo muestra formulario y lista).
 - **Refresco:** cada 15 s solo mientras haya alguna en `listo`/`en cola`/`procesando` y la
   pestaña esté visible; al volver a la pestaña consulta una vez. Tipos y reglas por estado
   (etiquetas, qué acción va en cada uno, la regla de los 30 min) en `src/lib/pdp.ts`.
+- **Versiones con otra carrocería/electrificación:** cada versión puede traer `tipo` y
+  `electrificacion` propios (opcionales, mismos `valor` de `/opciones`). "Igual que el modelo" =
+  la clave no se manda; se omite también si es igual al del modelo. El "desde" (`precioBase`) es la
+  más barata **de la electrificación del modelo**, como en la web. Publicar el panel solo después
+  de la web: una web vieja los descarta en silencio.
 - **Mock local** (los endpoints de la web aún no están desplegados):
   `node scripts/mock-pdp-api.mjs` (puerto 3401, secreto `mock-secreto-pdp`; el encabezado
   explica los gatillos para forzar 422/409/avisos) y en otra terminal

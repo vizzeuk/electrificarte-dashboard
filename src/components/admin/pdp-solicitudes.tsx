@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/empty-state";
 import { cancelarPdp, listarPdps, reintentarPdp } from "@/app/admin/pdps/actions";
-import { accionesDe, esActiva, estadoInfo, formatUsd, nombrePdp, ORDEN_ESTADOS, type PdpSolicitud } from "@/lib/pdp";
+import { accionesDe, diferenciasVersion, esActiva, estadoInfo, formatUsd, nombrePdp, ORDEN_ESTADOS, precioBase, type PdpSolicitud } from "@/lib/pdp";
 import { cn, formatCLP, formatFechaHora, formatNumero, hace } from "@/lib/utils";
 
 const INTERVALO = 15_000;
@@ -21,14 +21,15 @@ function Versiones({ s }: { s: PdpSolicitud }) {
   if (vs.length === 0) {
     return <p className="text-muted-foreground text-small">Sin versiones declaradas: el precio se toma de la fuente oficial.</p>;
   }
-  const precios = vs.map((v) => v.precio).filter((p) => p > 0);
-  const desde = precios.length ? Math.min(...precios) : null;
+  const desde = precioBase(vs, s.electrificacion);
   return (
     <p className="text-small">
       <span className="font-semibold">
         {vs.length} versi{vs.length === 1 ? "ón" : "ones"}
       </span>
-      <span className="text-muted-foreground">: {vs.map((v) => v.nombre).join(", ")}</span>
+      <span className="text-muted-foreground">
+        : {vs.map((v) => (diferenciasVersion(v) ? `${v.nombre} — ${diferenciasVersion(v)}` : v.nombre)).join(", ")}
+      </span>
       {desde != null && (
         <span className="text-muted-foreground">
           . Desde <span className="text-foreground tabular-nums">{formatCLP(desde)}</span>
