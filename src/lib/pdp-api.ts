@@ -145,14 +145,63 @@ export async function crearSolicitud(datos: PdpDatos & { creado_por: string }): 
   return fallo(r);
 }
 
+export interface Reintentada {
+  solicitud: PdpSolicitud | null;
+  /** Ej. "la ficha técnica no se guardó" (web sin la migración). */
+  avisos: string[];
+}
+
 /** Reintento, con o sin `cambios` (solo los campos que cambiaron). */
-export async function reintentarSolicitud(id: string, cambios?: Partial<PdpDatos>): Promise<PdpResultado<PdpSolicitud | null>> {
+export async function reintentarSolicitud(id: string, cambios?: Partial<PdpDatos>): Promise<PdpResultado<Reintentada>> {
   const body = cambios && Object.keys(cambios).length ? { id, cambios } : { id };
   const r = await llamar("/api/admin/pdp/solicitudes/reintentar", { method: "POST", body, timeout: TIMEOUT_CREAR });
   if (r.status === 200 && "body" in r && r.body?.ok !== false) {
-    return { ok: true, data: (r.body?.solicitud as PdpSolicitud) ?? null };
+    return {
+      ok: true,
+      data: {
+        solicitud: (r.body?.solicitud as PdpSolicitud) ?? null,
+        avisos: Array.isArray(r.body?.avisos) ? (r.body!.avisos as unknown[]).map(String) : [],
+      },
+    };
   }
   return fallo(r, "No se pudo reintentar, intenta de nuevo.");
+}
+
+export interface FichaSubida {
+  file_id: string;
+  nombre: string;
+}
+
+/**
+ * Sube la ficha técnica (PDF crudo) a `POST /api/admin/pdp/ficha`. La web la guarda en la Files
+ * API y devuelve el `file_id` que después va en la solicitud. Una web sin esta ruta responde 404:
+ * se informa en vez de crear la solicitud sin la ficha.
+ */
+export async function subirFicha(bytes: ArrayBuffer, nombre: string): Promise<PdpResultado<FichaSubida>> {
+  const secreto = process.env.ADMIN_API_SECRET;
+  if (!secreto) return { ok: false, tipo: "config", errores: [MSG_CONFIG] };
+  let r: Respuesta | { status: "red" };
+  try {
+    const res = await fetch(`${BASE}/api/admin/pdp/ficha?nombre=${encodeURIComponent(nombre)}`, {
+      method: "POST",
+      headers: { "x-admin-secret": secreto, accept: "application/json", "content-type": "application/pdf" },
+      body: bytes,
+      cache: "no-store",
+      redirect: "manual",
+      signal: AbortSignal.timeout(TIMEOUT_CREAR + 15_000),
+    });
+    if (res.status >= 300 && res.status < 400) return { ok: false, tipo: "config", errores: [MSG_CONFIG] };
+    r = { status: res.status, body: (await res.json().catch(() => null)) as Record<string, unknown> | null };
+  } catch {
+    r = { status: "red" };
+  }
+  const ficha = "body" in r ? (r.body?.ficha as FichaSubida | undefined) : undefined;
+  if (r.status === 201 && ficha?.file_id) return { ok: true, data: ficha };
+  if (r.status === 404) {
+    return { ok: false, tipo: "fallo", errores: ["La web todavía no acepta fichas técnicas (falta publicar la versión nueva). Envía la solicitud sin la ficha o espera."] };
+  }
+  if (r.status === 413) return { ok: false, tipo: "errores", errores: ["La ficha técnica pesa demasiado: el máximo es 4 MB."] };
+  return fallo(r, "No se pudo subir la ficha técnica, intenta de nuevo.");
 }
 
 /** Solo funciona en `listo`; si el flujo ya la tomó, la web responde 409. */

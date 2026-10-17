@@ -61,6 +61,7 @@ function Fila({
     terminada ? `Terminó ${hace(s.terminada_at, now)}` : `Pedida ${hace(s.created_at, now)}`,
     (s.intentos ?? 0) > 1 && `${formatNumero(s.intentos)} intentos`,
     s.lote && `Re-check semanal: ${s.lote}`,
+    s.ficha_nombre && `Ficha técnica: ${s.ficha_nombre}`,
     formatUsd(s.costo_usd) && `Costó ${formatUsd(s.costo_usd)}`,
   ].filter(Boolean) as string[];
 
@@ -256,7 +257,7 @@ export function PdpSolicitudes({ inicial, errorInicial, now: nowServidor }: { in
         toast.error("No se pudo reintentar", { description: res.errores.join("\n") });
       } else {
         toast.success("Reintento en cola", { description: `${nombrePdp(s)}. Empieza en menos de 15 min.` });
-        reemplazar(res.data, s.id);
+        reemplazar(res.data.solicitud, s.id);
       }
     } catch {
       toast.error("No se pudo reintentar, intenta de nuevo.");

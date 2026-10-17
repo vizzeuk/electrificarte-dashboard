@@ -43,6 +43,10 @@
 //                                            el panel muestra "lleva >30 min" en vez del error.
 // - POST /api/admin/pdp/solicitudes/reintentar {id, cambios?} → 200 en sin_datos/error/rechazada o
 //                                            en cola/procesando con más de 30 min; si no, 409.
+// - POST /api/admin/pdp/ficha?nombre=     → PDF crudo (oct-2026). 422 si no empieza con %PDF o pesa
+//                                            más de 4 MB; 502 si el nombre contiene "falla". 201 con
+//                                            { ficha: { file_id, nombre } }. Crear y reintentar guardan
+//                                            ficha_file_id/ficha_nombre (null en reintentar = quitarla).
 // - POST /api/admin/pdp/solicitudes/cancelar {id} → 200 solo en "listo" (borra la fila, como la web);
 //                                            si no, 409.
 // - GET  /__stats (sin secreto)           → cuántas veces se llamó cada ruta (para los tests).
@@ -179,6 +183,8 @@ function nueva(d, extra = {}) {
     electrificacion: d.electrificacion,
     url_oficial: d.url_oficial,
     versiones: soloDistintas(d.versiones ?? [], d),
+    ficha_file_id: d.ficha_file_id ?? null,
+    ficha_nombre: d.ficha_file_id ? d.ficha_nombre ?? "ficha-tecnica.pdf" : null,
     estado: "listo",
     detalle: "En espera de que n8n la tome.",
     mensaje: null,
@@ -321,6 +327,19 @@ const server = http.createServer(async (req, res) => {
     return send(res, 201, { ok: true, solicitud: publica(s), avisos, arrancaYa });
   }
 
+  if (ruta === "POST /api/admin/pdp/ficha") {
+    const partes = [];
+    for await (const c of req) partes.push(c);
+    const buf = Buffer.concat(partes);
+    const nombre = url.searchParams.get("nombre") || "ficha-tecnica.pdf";
+    await sleep(900);
+    if (buf.length > 4 * 1024 * 1024) { log(422); return send(res, 422, { ok: false, errores: ["La ficha tecnica pesa mas de 4 MB."] }); }
+    if (buf.subarray(0, 5).toString("latin1") !== "%PDF-") { log(422); return send(res, 422, { ok: false, errores: ["La ficha tecnica tiene que ser un PDF."] }); }
+    if (nombre.toLowerCase().includes("falla")) { log(502); return send(res, 502, { ok: false, errores: ["No se pudo guardar la ficha tecnica: Files API → 500"] }); }
+    log(201);
+    return send(res, 201, { ok: true, ficha: { file_id: `file_mock${randomUUID().replace(/-/g, "").slice(0, 16)}`, nombre } });
+  }
+
   if (ruta === "POST /api/admin/pdp/solicitudes/reintentar") {
     const d = await leer(req);
     const s = db.find((x) => x.id === d?.id);
@@ -334,6 +353,7 @@ const server = http.createServer(async (req, res) => {
     const cambios = d.cambios && typeof d.cambios === "object" ? d.cambios : {};
     const errores = validar(cambios, true);
     if (errores.length) { log(422); return send(res, 422, { ok: false, errores }); }
+    if (cambios.ficha_file_id === null) cambios.ficha_nombre = null;
     Object.assign(s, cambios, {
       estado: "listo", detalle: "En espera de que n8n la tome.", mensaje: null, studio_url: null, lote: null,
       terminada_at: null, costo_usd: null, updated_at: iso(now), intentos: (s.intentos ?? 1) + 1, _t0: now, _pegada: false, _final: undefined, _razon: undefined,

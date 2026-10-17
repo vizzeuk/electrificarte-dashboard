@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAdminEmail } from "@/lib/auth/admin";
 import * as api from "@/lib/pdp-api";
-import type { PdpDatos, PdpResultado, PdpSolicitud } from "@/lib/pdp";
+import { FICHA_MAX_BYTES, validarFicha, type PdpDatos, type PdpResultado, type PdpSolicitud } from "@/lib/pdp";
 
 /**
  * Server actions de la sección PDPs. Cada una valida la sesión de admin ANTES de tocar la web:
@@ -55,6 +55,19 @@ function limpiar(d: Partial<PdpDatos>, parcial: boolean): { datos: Partial<PdpDa
     if (datos.versiones.some((v) => !v.nombre)) errores.push("Cada versión necesita un nombre.");
     if (datos.versiones.some((v) => !Number.isInteger(v.precio) || v.precio <= 0)) errores.push("Cada versión necesita un precio en pesos mayor a 0.");
   }
+  // Ficha técnica: siempre opcional. El id lo devuelve `subirFichaPdp`; null = quitarla.
+  if ("ficha_file_id" in d) {
+    const id = d.ficha_file_id;
+    if (id === null) {
+      datos.ficha_file_id = null;
+      datos.ficha_nombre = null;
+    } else if (typeof id === "string" && /^file_[A-Za-z0-9_-]{6,}$/.test(id)) {
+      datos.ficha_file_id = id;
+      datos.ficha_nombre = texto(d.ficha_nombre, 120) || "ficha-tecnica.pdf";
+    } else {
+      errores.push("La ficha técnica no se subió bien: vuelve a adjuntarla.");
+    }
+  }
   return { datos, errores };
 }
 
@@ -69,13 +82,26 @@ export async function crearPdp(input: PdpDatos): Promise<PdpResultado<api.Creada
   return res;
 }
 
+/** Sube la ficha técnica (PDF) antes de crear o corregir. Devuelve el id que va en la solicitud. */
+export async function subirFichaPdp(form: FormData): Promise<PdpResultado<api.FichaSubida>> {
+  const admin = await getAdminEmail();
+  if (!admin) return NO_AUTORIZADO;
+  const archivo = form.get("ficha");
+  if (!(archivo instanceof File)) return { ok: false, tipo: "errores", errores: ["Falta el archivo de la ficha técnica."] };
+  if (archivo.size > FICHA_MAX_BYTES) return { ok: false, tipo: "errores", errores: [validarFicha(archivo.size, new Uint8Array())!] };
+  const bytes = await archivo.arrayBuffer();
+  const error = validarFicha(bytes.byteLength, new Uint8Array(bytes, 0, Math.min(5, bytes.byteLength)));
+  if (error) return { ok: false, tipo: "errores", errores: [`Ficha técnica: ${error}`] };
+  return api.subirFicha(bytes, archivo.name || "ficha-tecnica.pdf");
+}
+
 export async function listarPdps(): Promise<PdpResultado<PdpSolicitud[]>> {
   const admin = await getAdminEmail();
   if (!admin) return NO_AUTORIZADO;
   return api.listarSolicitudes({ limit: 100 });
 }
 
-export async function reintentarPdp(id: string, cambios?: Partial<PdpDatos>): Promise<PdpResultado<PdpSolicitud | null>> {
+export async function reintentarPdp(id: string, cambios?: Partial<PdpDatos>): Promise<PdpResultado<api.Reintentada>> {
   const admin = await getAdminEmail();
   if (!admin) return NO_AUTORIZADO;
   if (typeof id !== "string" || !id) return { ok: false, tipo: "errores", errores: ["Falta el id."] };
