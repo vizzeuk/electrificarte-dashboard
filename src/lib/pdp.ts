@@ -124,9 +124,17 @@ export interface Acciones {
   studio: boolean;
   /** "en cola"/"procesando" con más de 30 min: probablemente se quedó pegada. */
   pegada: boolean;
+  /**
+   * "listo" con más de 30 min: n8n no la tomó (VPS caída, o el webhook y el cron fallaron). La web
+   * nueva la pasa a "error" en el próximo GET; esto cubre una web sin barrido y los segundos hasta
+   * ese GET. Reintentar no sirve: la deja otra vez en "listo". Hay que revisar n8n.
+   */
+  sinTomar: boolean;
 }
 
 export function accionesDe(s: PdpSolicitud, now: number): Acciones {
+  // Desde oct-2026 la web pasa las trabadas a "error" sola (con la razón); esto queda para una
+  // web vieja y para los segundos antes del próximo GET.
   const pegada = (s.estado === "en cola" || s.estado === "procesando") && now - ultimoMovimiento(s) > TREINTA_MIN;
   // Mismos estados que acepta /reintentar en la web (lib/pdp-creacion/solicitudes.ts). "rechazada"
   // suele ser que la PDP ya existe en Sanity: reintentar sin corregir vuelve a fallar, pero
@@ -138,6 +146,7 @@ export function accionesDe(s: PdpSolicitud, now: number): Acciones {
     corregir: fallida,
     studio: Boolean(s.studio_url) && (s.estado === "listo_para_revisar" || s.estado === "borrador_incompleto"),
     pegada,
+    sinTomar: s.estado === "listo" && now - ultimoMovimiento(s) > TREINTA_MIN,
   };
 }
 
