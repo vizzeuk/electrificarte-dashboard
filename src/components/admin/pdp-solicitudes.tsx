@@ -15,6 +15,7 @@ import { accionesDe, diferenciasVersion, esActiva, estadoInfo, formatUsd, nombre
 import { cn, formatCLP, formatFechaHora, formatNumero, hace } from "@/lib/utils";
 
 const INTERVALO = 15_000;
+const UN_DIA = 24 * 60 * 60_000;
 
 function Versiones({ s }: { s: PdpSolicitud }) {
   const vs = s.versiones ?? [];
@@ -74,9 +75,25 @@ function Fila({
               {info.label}
             </Badge>
           </div>
-          {s.detalle && (
-            <p className="text-muted-foreground line-clamp-2 text-small sm:line-clamp-1" title={s.detalle}>
-              {s.detalle}
+          {s.estado === "error" ? (
+            <p className="text-destructive flex items-start gap-1.5 text-small break-words" data-testid="pdp-razon-error">
+              <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+              <span>
+                <span className="font-semibold">Razón del error:</span>{" "}
+                {s.detalle || "la web no informó la razón. Revisa el aviso completo o la sesión en Console."}
+              </span>
+            </p>
+          ) : (
+            s.detalle && (
+              <p className="text-muted-foreground line-clamp-2 text-small sm:line-clamp-1" title={s.detalle}>
+                {s.detalle}
+              </p>
+            )
+          )}
+          {acc.sinTomar && (
+            <p className="text-foreground flex items-center gap-1.5 text-small">
+              <CircleAlert className="size-4 shrink-0" strokeWidth={1.5} aria-hidden /> Lleva más de 30 min en espera y el flujo no
+              la ha tomado: revisa que el workflow de n8n esté activo.
             </p>
           )}
           {acc.pegada && (
@@ -152,6 +169,12 @@ export function PdpSolicitudes({ inicial, errorInicial, now: nowServidor }: { in
   const [ocupadas, setOcupadas] = useState<Set<string>>(new Set());
   const [aCancelar, setACancelar] = useState<PdpSolicitud | null>(null);
   const enVuelo = useRef(false);
+  // Último estado visto de cada una: para avisar cuando una pasa a "error" mientras miras la lista.
+  const vistos = useRef(new Map(inicial.map((s) => [s.id, s.estado])));
+
+  const recordar = (lista: PdpSolicitud[]) => {
+    for (const s of lista) vistos.current.set(s.id, s.estado);
+  };
 
   const refrescar = useCallback(async () => {
     if (enVuelo.current) return;
@@ -160,6 +183,14 @@ export function PdpSolicitudes({ inicial, errorInicial, now: nowServidor }: { in
     try {
       const res = await listarPdps();
       if (res.ok) {
+        const fallidas = res.data.filter((s) => s.estado === "error" && vistos.current.has(s.id) && vistos.current.get(s.id) !== "error");
+        recordar(res.data);
+        for (const s of fallidas) {
+          toast.error(`Falló la PDP ${nombrePdp(s)}`, {
+            description: s.detalle || "La web no informó la razón: revisa el aviso completo en la lista.",
+            duration: 20_000,
+          });
+        }
         setItems(res.data);
         setError(null);
       } else {
@@ -212,7 +243,9 @@ export function PdpSolicitudes({ inicial, errorInicial, now: nowServidor }: { in
     });
 
   const reemplazar = (s: PdpSolicitud | null, id: string) => {
-    if (s) setItems((prev) => prev.map((x) => (x.id === id ? s : x)));
+    if (!s) return;
+    recordar([s]);
+    setItems((prev) => prev.map((x) => (x.id === id ? s : x)));
   };
 
   async function reintentar(s: PdpSolicitud) {
@@ -262,6 +295,8 @@ export function PdpSolicitudes({ inicial, errorInicial, now: nowServidor }: { in
   }, [items]);
   const estados = [...ORDEN_ESTADOS.filter((e) => conteo.has(e)), ...[...conteo.keys()].filter((e) => !ORDEN_ESTADOS.includes(e as never))];
   const visibles = filtro === "todos" ? items : items.filter((s) => s.estado === filtro);
+  const erroresRecientes = items.filter((s) => s.estado === "error" && now - new Date(s.terminada_at ?? s.updated_at ?? s.created_at).getTime() < UN_DIA);
+  const sinTomar = items.filter((s) => accionesDe(s, now).sinTomar).length;
 
   if (items.length === 0 && !error) {
     return (
@@ -313,6 +348,33 @@ export function PdpSolicitudes({ inicial, errorInicial, now: nowServidor }: { in
         <div role="alert" className="border-destructive text-destructive flex items-start gap-2 rounded-control border p-4 text-small">
           <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
           <span>{error}</span>
+        </div>
+      )}
+
+      {erroresRecientes.length > 0 && filtro !== "error" && (
+        <div role="status" className="border-destructive flex flex-col gap-3 rounded-control border p-4 text-small sm:flex-row sm:items-center sm:justify-between" data-testid="pdp-aviso-errores">
+          <p className="text-destructive flex items-start gap-2">
+            <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+            <span>
+              {erroresRecientes.length === 1
+                ? `${nombrePdp(erroresRecientes[0])} falló en las últimas 24 h.`
+                : `${formatNumero(erroresRecientes.length)} solicitudes fallaron en las últimas 24 h.`}{" "}
+              La razón está en cada una.
+            </span>
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setFiltro("error")} className="shrink-0 cursor-pointer">
+            Ver las con error
+          </Button>
+        </div>
+      )}
+
+      {sinTomar > 0 && (
+        <div role="status" className="flex items-start gap-2 rounded-control border p-4 text-small" data-testid="pdp-aviso-sin-tomar">
+          <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+          <span>
+            {sinTomar === 1 ? "Hay 1 solicitud" : `Hay ${formatNumero(sinTomar)} solicitudes`} en espera hace más de 30 min: el flujo de
+            n8n no las está tomando (debería en menos de 15 min). Revisa que el workflow esté activo.
+          </span>
         </div>
       )}
 

@@ -45,6 +45,12 @@ la escritura en Sanity; el panel solo muestra formulario y lista).
 - **Refresco:** cada 15 s solo mientras haya alguna en `listo`/`en cola`/`procesando` y la
   pestaña esté visible; al volver a la pestaña consulta una vez. Tipos y reglas por estado
   (etiquetas, qué acción va en cada uno, la regla de los 30 min) en `src/lib/pdp.ts`.
+- **Errores:** la web deja toda falla en `error` con la razón en `detalle` (sesión caída, tope de
+  gasto, paso de n8n que respondió 500, trabada >30 min, `listo` que nadie tomó = VPS de n8n
+  caída: las barre el propio GET y avisa por WhatsApp desde la web). El panel la muestra en rojo,
+  avisa con un toast cuando una pasa a `error` mientras se mira la lista, y resume las de las
+  últimas 24 h arriba. Con una web sin barrido, una `listo` >30 min solo muestra un aviso.
+  Mock: modelo con "error" / "tope" / "falla"; `MOCK_SIN_BARRIDO=1` imita la web vieja.
 - **Versiones con otra carrocería/electrificación:** cada versión puede traer `tipo` y
   `electrificacion` propios (opcionales, mismos `valor` de `/opciones`). "Igual que el modelo" =
   la clave no se manda; se omite también si es igual al del modelo. El "desde" (`precioBase`) es la

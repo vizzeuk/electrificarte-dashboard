@@ -31,6 +31,16 @@
 //                                            o la URL: "error" → error; URL con "noticia"/"blog"
 //                                            o modelo con "sin datos" → sin_datos; si no,
 //                                            alterna listo_para_revisar / borrador_incompleto.
+//                                            El error trae la razón como la web (oct-2026): con
+//                                            "tope" en el modelo, tope de gasto; "falla" → un paso
+//                                            de n8n que respondió 500; si no, sesión caída.
+//                                            Como la web, antes de listar barre las trabadas:
+//                                            listo/en cola/procesando con >30 min sin moverse →
+//                                            error con la razón (una "listo" = VPS de n8n caída).
+//                                            Semilla: una "listo" hace 40 min que nadie tomó y una
+//                                            "procesando" trabada; el primer GET las pasa a error.
+//                                            MOCK_SIN_BARRIDO=1 imita una web vieja (sin barrido):
+//                                            el panel muestra "lleva >30 min" en vez del error.
 // - POST /api/admin/pdp/solicitudes/reintentar {id, cambios?} → 200 en sin_datos/error/rechazada o
 //                                            en cola/procesando con más de 30 min; si no, 409.
 // - POST /api/admin/pdp/solicitudes/cancelar {id} → 200 solo en "listo" (borra la fila, como la web);
@@ -112,8 +122,28 @@ function cerrar(s, estado, at) {
     s.detalle = "La URL no tiene precios ni ficha del modelo. Casi siempre es la URL: usa la página de precios o el configurador.";
     s.mensaje = `❌ No se encontraron datos para ${nombre}.\n\nLa página ${s.url_oficial} no tiene precios ni especificaciones del modelo. Parece una noticia o una página general.\n\nCorrige la URL desde el panel y reintenta.`;
   } else {
-    s.detalle = "El agente no respondió a tiempo (timeout de 10 min).";
-    s.mensaje = `❌ Error al investigar ${nombre}.\n\nEl agente no respondió a tiempo. No se creó nada en Sanity. Puedes reintentar desde el panel.`;
+    const m = s.modelo.toLowerCase();
+    s.detalle = s._razon ?? (m.includes("tope")
+      ? "La sesion llego al tope de gasto sin entregar la ficha"
+      : m.includes("falla")
+        ? 'Falló el paso "¿Terminó? Cerrar y crear" (HTTP 504): FUNCTION_INVOCATION_TIMEOUT'
+        : "La sesion se cayo tras agotar los reintentos: Overloaded (overloaded_error)");
+    s.mensaje = `❌ Fallo la investigacion de ${nombre}.\n\n${s.detalle}\n\nReintenta desde el panel. Sesion: sesn_mock${s.id.slice(0, 8)}`;
+  }
+}
+
+/** Como `barrerTrabadas` de la web: activas con más de 30 min sin moverse → error con la razón. */
+function barrer(now = Date.now()) {
+  if (process.env.MOCK_SIN_BARRIDO) return;
+  for (const s of db) {
+    if (ACTIVOS.includes(s.estado) && now - new Date(s.updated_at).getTime() > 30 * MIN) {
+      s._razon = s.estado === "listo"
+        ? "n8n no la tomo en 30 min: la VPS de n8n o el workflow estan caidos."
+        : s.estado === "en cola"
+          ? "n8n la tomo pero no alcanzo a validarla en 30 min (el flujo se corto)."
+          : `La sesion sesn_mock${s.id.slice(0, 8)} seguia corriendo despues de 30 min: se detuvo.`;
+      cerrar(s, "error", now);
+    }
   }
 }
 
@@ -185,8 +215,11 @@ function semilla() {
   db[db.length - 1].detalle = "Alguien creó la PDP a mano en Studio mientras tanto: no se duplicó.";
   db[db.length - 1].mensaje = null;
   db[db.length - 1].studio_url = null;
-  // Una "pegada": procesando hace 45 min, no avanza sola → permite probar Reintentar.
+  // Una trabada: procesando hace 45 min. El barrido del primer GET la pasa a "error" con la razón.
   ej({ marca: "Hyundai", modelo: "Inster", anio: 2026, tipo: "Hatchback", url_oficial: "https://www.hyundai.cl/inster/", versiones: [{ nombre: "Inster Plus", precio: 21990000 }] }, "procesando", 45);
+  // Nadie la toma hace 40 min (VPS de n8n caída): el barrido la pasa a error.
+  ej({ marca: "BYD", modelo: "Atto 2", anio: 2026, tipo: "SUV", url_oficial: "https://www.byd.cl/atto-2/", versiones: [{ nombre: "Atto 2 GL", precio: 19990000 }] }, "listo", 40);
+  db[db.length - 1].detalle = null;
   db.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
@@ -257,6 +290,7 @@ const server = http.createServer(async (req, res) => {
 
   if (ruta === "GET /api/admin/pdp/solicitudes") {
     const id = url.searchParams.get("id");
+    if (!id) barrer(now);
     if (id) {
       const s = db.find((x) => x.id === id);
       log(s ? 200 : 404);
@@ -302,7 +336,7 @@ const server = http.createServer(async (req, res) => {
     if (errores.length) { log(422); return send(res, 422, { ok: false, errores }); }
     Object.assign(s, cambios, {
       estado: "listo", detalle: "En espera de que n8n la tome.", mensaje: null, studio_url: null, lote: null,
-      terminada_at: null, costo_usd: null, updated_at: iso(now), intentos: (s.intentos ?? 1) + 1, _t0: now, _pegada: false, _final: undefined,
+      terminada_at: null, costo_usd: null, updated_at: iso(now), intentos: (s.intentos ?? 1) + 1, _t0: now, _pegada: false, _final: undefined, _razon: undefined,
     });
     s.versiones = soloDistintas(s.versiones ?? [], s);
     console.log("  cambios:", JSON.stringify(cambios));
