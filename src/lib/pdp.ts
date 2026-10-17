@@ -48,6 +48,12 @@ export interface PdpDatos {
   url_oficial: string | null;
   /** Opcional: [] = el precio sale de la fuente oficial (con cita) y se confirma en Studio. */
   versiones: PdpVersion[];
+  /**
+   * Ficha técnica (PDF) ya subida con `subirFichaPdp`. Opcional. En "Corregir": sin la clave se
+   * conserva la que tenía, `null` la quita.
+   */
+  ficha_file_id?: string | null;
+  ficha_nombre?: string | null;
 }
 
 export interface PdpSolicitud {
@@ -72,6 +78,9 @@ export interface PdpSolicitud {
   updated_at?: string | null;
   terminada_at?: string | null;
   intentos?: number | null;
+  /** Ficha técnica adjunta (oct-2026). Sin la migración de la web, no viene. */
+  ficha_file_id?: string | null;
+  ficha_nombre?: string | null;
 }
 
 /** Resultado de una acción del panel, ya traducido para la UI (serializable). */
@@ -148,6 +157,17 @@ export function accionesDe(s: PdpSolicitud, now: number): Acciones {
     pegada,
     sinTomar: s.estado === "listo" && now - ultimoMovimiento(s) > TREINTA_MIN,
   };
+}
+
+/** Ficha técnica: lo mismo que acepta la web (Vercel corta los request de más de 4,5 MB). */
+export const FICHA_MAX_BYTES = 4 * 1024 * 1024;
+
+/** null si sirve; si no, el error para el formulario. Los bytes mandan, no la extensión. */
+export function validarFicha(tamano: number, primeros: Uint8Array): string | null {
+  if (tamano === 0) return "El archivo está vacío.";
+  if (tamano > FICHA_MAX_BYTES) return `Pesa ${(tamano / 1024 / 1024).toFixed(1)} MB y el máximo es 4 MB. Sube solo la ficha técnica, no el catálogo completo.`;
+  if (String.fromCharCode(...primeros.subarray(0, 5)) !== "%PDF-") return "Tiene que ser un PDF.";
+  return null;
 }
 
 const PUNTOS = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 });

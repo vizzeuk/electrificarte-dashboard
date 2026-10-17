@@ -5,15 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Check, ChevronDown, ChevronsUpDown, CircleAlert, ExternalLink, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, CircleAlert, ExternalLink, FileText, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { crearPdp, reintentarPdp } from "@/app/admin/pdps/actions";
-import { conPuntos, precioBase, sinPuntos, type PdpDatos, type PdpOpciones, type PdpResultado, type PdpSolicitud } from "@/lib/pdp";
+import { crearPdp, reintentarPdp, subirFichaPdp } from "@/app/admin/pdps/actions";
+import { conPuntos, precioBase, sinPuntos, validarFicha, type PdpDatos, type PdpOpciones, type PdpResultado, type PdpSolicitud } from "@/lib/pdp";
 import { cn, formatCLP } from "@/lib/utils";
 
 type Valores = {
@@ -100,6 +100,19 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
   const alertaRef = useRef<HTMLDivElement>(null);
   const [errorServidor, setErrorServidor] = useState<ErrorServidor | null>(null);
   const [marcaAbierta, setMarcaAbierta] = useState(false);
+  // Ficha técnica: un PDF nuevo elegido, o (al corregir) quitar la que ya tenía.
+  const [ficha, setFicha] = useState<File | null>(null);
+  const [quitarFicha, setQuitarFicha] = useState(false);
+  const [errorFicha, setErrorFicha] = useState<string | null>(null);
+  const fichaGuardada = quitarFicha ? null : solicitud?.ficha_nombre || null;
+
+  async function elegirFicha(archivo: File | undefined) {
+    setErrorFicha(null);
+    if (!archivo) return;
+    const error = validarFicha(archivo.size, new Uint8Array(await archivo.slice(0, 5).arrayBuffer()));
+    if (error) return setErrorFicha(error);
+    setFicha(archivo);
+  }
 
   const {
     register,
@@ -148,17 +161,37 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
 
   const enviar = handleSubmit(async (valores) => {
     setErrorServidor(null);
+    // Un archivo inválido no se manda en silencio: se lleva al usuario al campo.
+    if (errorFicha) {
+      const campo = document.getElementById("pdp-ficha");
+      campo?.scrollIntoView({ behavior: "smooth", block: "center" });
+      campo?.focus({ preventScroll: true });
+      return;
+    }
     const datos = aDatos(valores);
     try {
+      // La ficha se sube primero (aparte, por tamaño); la solicitud lleva solo su id.
+      let camposFicha: Partial<PdpDatos> = {};
+      if (ficha) {
+        const form = new FormData();
+        form.append("ficha", ficha);
+        const sub = await subirFichaPdp(form);
+        if (!sub.ok) return mostrarError(sub);
+        camposFicha = { ficha_file_id: sub.data.file_id, ficha_nombre: sub.data.nombre };
+      } else if (solicitud?.ficha_file_id && quitarFicha) {
+        camposFicha = { ficha_file_id: null };
+      }
+
       if (solicitud) {
-        const cambios = diferencias(datos, original.current);
+        const cambios = { ...diferencias(datos, original.current), ...camposFicha };
         const res = await reintentarPdp(solicitud.id, cambios);
         if (!res.ok) return mostrarError(res);
         toast.success(Object.keys(cambios).length ? "Reintento en cola con tus cambios" : "Reintento en cola", {
-          description: "Empieza en menos de 15 min.",
+          description: [...res.data.avisos, "Empieza en menos de 15 min."].join("\n"),
+          duration: res.data.avisos.length ? 15_000 : 5_000,
         });
       } else {
-        const res = await crearPdp(datos);
+        const res = await crearPdp({ ...datos, ...camposFicha });
         if (!res.ok) return mostrarError(res);
         const notas = [...res.data.avisos, ...(res.data.arrancaYa ? [] : ["Empieza en menos de 15 min."])];
         toast.success("Solicitud creada", {
@@ -402,6 +435,68 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
               </p>
             )}
           </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="pdp-ficha">
+              Ficha técnica oficial para Chile <span className="text-muted-foreground font-normal">(opcional, PDF de hasta 4 MB)</span>
+            </Label>
+            {ficha || fichaGuardada ? (
+              <div className="flex items-center justify-between gap-3 rounded-control border py-2 pr-2 pl-3 text-small" data-testid="pdp-ficha-elegida">
+                <span className="flex min-w-0 items-center gap-2">
+                  <FileText className="text-muted-foreground size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                  <span className="truncate">{ficha ? ficha.name : fichaGuardada}</span>
+                  <span className="text-muted-foreground shrink-0 tabular-nums">
+                    {ficha ? `${(ficha.size / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : "ya adjunta"}
+                  </span>
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => (ficha ? setFicha(null) : setQuitarFicha(true))}
+                  className="shrink-0 cursor-pointer"
+                >
+                  <X strokeWidth={1.5} aria-hidden /> Quitar
+                </Button>
+              </div>
+            ) : (
+              <Input
+                id="pdp-ficha"
+                type="file"
+                accept="application/pdf,.pdf"
+                aria-invalid={Boolean(errorFicha)}
+                aria-describedby="pdp-ficha-ayuda"
+                onChange={(e) => {
+                  const archivo = e.target.files?.[0];
+                  // El input queda vacío: el archivo válido se muestra arriba, el inválido no queda elegido.
+                  e.target.value = "";
+                  void elegirFicha(archivo);
+                }}
+                className="cursor-pointer"
+              />
+            )}
+            {errorFicha && (
+              <p className="text-destructive text-small">
+                {errorFicha}{" "}
+                <Button type="button" variant="link" size="sm" onClick={() => setErrorFicha(null)} className="cursor-pointer">
+                  Enviar sin ficha
+                </Button>
+              </p>
+            )}
+            {quitarFicha && !ficha && solicitud?.ficha_nombre && (
+              <p className="text-small">
+                Se va a quitar {solicitud.ficha_nombre}.{" "}
+                <Button type="button" variant="link" size="sm" onClick={() => setQuitarFicha(false)} className="cursor-pointer">
+                  Deshacer
+                </Button>
+              </p>
+            )}
+            <p id="pdp-ficha-ayuda" className="text-muted-foreground text-small">
+              El PDF de la marca para el mercado chileno, no de otro país. El agente lo usa solo para completar datos técnicos
+              que la web no publica: si la web dice otra cosa, manda la web. El precio sale de la ficha solo si no pones
+              versiones y la web no publica ninguno. El re-check semanal sigue revisando la URL, no la ficha.
+            </p>
+          </div>
         </section>
 
         {/* Versiones */}
@@ -596,7 +691,9 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
           </Link>
         </Button>
         <p className="text-muted-foreground text-small sm:ml-2" aria-live="polite">
-          {isSubmitting ? "Revisando que la URL responda. Puede tardar hasta 15 s." : "Revisamos que la URL esté viva antes de dejarla en cola."}
+          {isSubmitting
+            ? ficha ? "Subiendo la ficha y revisando que la URL responda. Puede tardar hasta 30 s." : "Revisando que la URL responda. Puede tardar hasta 15 s."
+            : "Revisamos que la URL esté viva antes de dejarla en cola."}
         </p>
       </div>
     </form>

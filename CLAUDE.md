@@ -56,6 +56,11 @@ la escritura en Sanity; el panel solo muestra formulario y lista).
   la clave no se manda; se omite también si es igual al del modelo. El "desde" (`precioBase`) es la
   más barata **de la electrificación del modelo**, como en la web. Publicar el panel solo después
   de la web: una web vieja los descarta en silencio.
+- **Ficha técnica (PDF, opcional):** campo en "Fuente oficial" de Nueva/Corregir. Se sube primero
+  con la server action `subirFichaPdp` → `POST /api/admin/pdp/ficha` (PDF crudo, máx. 4 MB,
+  `serverActions.bodySizeLimit` en `next.config.ts`) y la solicitud lleva solo `ficha_file_id`
+  y `ficha_nombre` (en Corregir: sin la clave se conserva, `null` la quita). El agente la usa solo
+  para specs técnicas que la web no trae; el precio, último recurso. Publicar después de la web.
 - **Mock local** (los endpoints de la web aún no están desplegados):
   `node scripts/mock-pdp-api.mjs` (puerto 3401, secreto `mock-secreto-pdp`; el encabezado
   explica los gatillos para forzar 422/409/avisos) y en otra terminal
