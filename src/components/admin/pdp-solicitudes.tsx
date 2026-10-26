@@ -62,6 +62,8 @@ function Fila({
     (s.intentos ?? 0) > 1 && `${formatNumero(s.intentos)} intentos`,
     s.lote && `Re-check semanal: ${s.lote}`,
     s.ficha_nombre && `Ficha técnica: ${s.ficha_nombre}`,
+    s.versiones?.some((v) => v.ficha_file_id) &&
+      `Fichas de versión: ${s.versiones.filter((v) => v.ficha_file_id).map((v) => v.nombre).join(", ")}`,
     formatUsd(s.costo_usd) && `Costó ${formatUsd(s.costo_usd)}`,
   ].filter(Boolean) as string[];
 
