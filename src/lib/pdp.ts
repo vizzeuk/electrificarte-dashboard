@@ -17,8 +17,14 @@ export type PdpEstado =
 
 export interface PdpVersion {
   nombre: string;
-  /** Pesos chilenos, entero. Precio de lista, sin bonos. */
+  /** Pesos chilenos, entero. Precio de lista: el MÁS ALTO que publica la marca, sin bonos. */
   precio: number;
+  /**
+   * Opcional (oct-2026): el precio MÁS BAJO que publica la marca para esta versión, con bonos y/o
+   * financiamiento. Menor que `precio`. Sin él, la web usa el que el agente lea de la fuente (con
+   * su cita) y deja un hallazgo para confirmarlo. Es el que el sitio muestra en grande.
+   */
+  precio_financiamiento?: number | null;
   /**
    * Opcionales: solo cuando la versión es de otra carrocería o electrificación que el modelo
    * (ej. la versión EV de un modelo híbrido). Mismos `valor` de `/opciones`. "Igual que el

@@ -30,6 +30,7 @@ function Versiones({ s }: { s: PdpSolicitud }) {
       </span>
       <span className="text-muted-foreground">
         : {vs.map((v) => (diferenciasVersion(v) ? `${v.nombre} — ${diferenciasVersion(v)}` : v.nombre)).join(", ")}
+        {vs.some((v) => v.precio_financiamiento) && " · con precio con bonos y/o financiamiento declarado"}
       </span>
       {desde != null && (
         <span className="text-muted-foreground">

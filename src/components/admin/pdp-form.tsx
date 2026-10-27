@@ -27,12 +27,12 @@ type Valores = {
    * tipo/electrificacion: IGUAL = "Igual que el modelo" (no se manda). ficha_*: la ficha de la
    * versión ya guardada en la web ("" = sin ficha); un PDF recién elegido vive aparte hasta subirlo.
    */
-  versiones: { nombre: string; precio: string; tipo: string; electrificacion: string; ficha_file_id: string; ficha_nombre: string }[];
+  versiones: { nombre: string; precio: string; precio_financiamiento: string; tipo: string; electrificacion: string; ficha_file_id: string; ficha_nombre: string }[];
 };
 
 /** Valor del select para "Igual que el modelo" (Radix no acepta "" como valor de un ítem). */
 const IGUAL = "__igual__";
-const VERSION_VACIA = { nombre: "", precio: "", tipo: IGUAL, electrificacion: IGUAL, ficha_file_id: "", ficha_nombre: "" };
+const VERSION_VACIA = { nombre: "", precio: "", precio_financiamiento: "", tipo: IGUAL, electrificacion: IGUAL, ficha_file_id: "", ficha_nombre: "" };
 
 type ErrorServidor = Extract<PdpResultado<unknown>, { ok: false }>;
 
@@ -49,6 +49,7 @@ function aValores(s?: PdpSolicitud): Valores {
       ? s.versiones.map((v) => ({
           nombre: v.nombre ?? "",
           precio: conPuntos(v.precio ?? ""),
+          precio_financiamiento: conPuntos(v.precio_financiamiento ?? ""),
           tipo: v.tipo || IGUAL,
           electrificacion: v.electrificacion || IGUAL,
           ficha_file_id: v.ficha_file_id ?? "",
@@ -72,6 +73,8 @@ function aDatos(v: Valores): PdpDatos {
       .map((x) => ({
         nombre: x.nombre.trim(),
         precio: sinPuntos(x.precio),
+        // Opcional: el más bajo que publica la marca (con bonos y/o financiamiento). Vacío = la clave no va.
+        ...(sinPuntos(x.precio_financiamiento) > 0 ? { precio_financiamiento: sinPuntos(x.precio_financiamiento) } : {}),
         // "Igual que el modelo" o igual al del modelo → la clave no va (ni "" ni null).
         ...(x.tipo !== IGUAL && x.tipo !== v.tipo ? { tipo: x.tipo } : {}),
         ...(x.electrificacion !== IGUAL && x.electrificacion !== v.electrificacion ? { electrificacion: x.electrificacion } : {}),
@@ -577,7 +580,7 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
             <p id="pdp-ficha-ayuda" className="text-muted-foreground text-small">
               El PDF de la marca para el mercado chileno, no de otro país. El agente lo usa solo para completar datos técnicos
               que la web no publica: si la web dice otra cosa, manda la web. El precio sale de la ficha solo si no pones
-              versiones y la web no publica ninguno. El re-check semanal sigue revisando la URL, no la ficha.
+              versiones y la web no publica ninguno. El re-check mensual sigue revisando la URL, no la ficha.
             </p>
           </div>
         </section>
@@ -606,7 +609,7 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
               const errorVersion = erroresFichaVersion[f.id] ?? null;
               const conFicha = Boolean(archivoVersion || guardadaVersion || errorVersion) || conCampoFicha.has(f.id);
               return (
-                <li key={f.id} className="grid gap-3 border-b pb-4 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-start">
+                <li key={f.id} className="grid gap-3 border-b pb-4 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_10rem_13.5rem_auto] sm:items-start">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor={`pdp-v${i}-nombre`} className={cn(i > 0 && "sm:sr-only")}>
                       Nombre de la versión
@@ -650,6 +653,42 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
                     />
                     {err(e?.precio?.message)}
                   </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor={`pdp-v${i}-financiamiento`} className={cn("whitespace-nowrap", i > 0 && "sm:sr-only")}>
+                      Con bonos y/o financiamiento
+                    </Label>
+                    <Controller
+                      control={control}
+                      name={`versiones.${i}.precio_financiamiento`}
+                      rules={{
+                        validate: (v, todos) => {
+                          const pf = sinPuntos(v);
+                          if (!(pf > 0)) return true;
+                          return pf < sinPuntos(todos.versiones[i]?.precio ?? "") || "Tiene que ser menor que el de lista.";
+                        },
+                      }}
+                      render={({ field, fieldState }) => (
+                        <div className="relative">
+                          <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2" aria-hidden>
+                            $
+                          </span>
+                          <Input
+                            id={`pdp-v${i}-financiamiento`}
+                            inputMode="numeric"
+                            autoComplete="off"
+                            placeholder="Opcional"
+                            className="pl-7 tabular-nums"
+                            aria-invalid={Boolean(fieldState.error)}
+                            value={field.value}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                            onChange={(ev) => field.onChange(conPuntos(ev.target.value))}
+                          />
+                        </div>
+                      )}
+                    />
+                    {err(e?.precio_financiamiento?.message)}
+                  </div>
                   <div className={cn("flex justify-end", i === 0 && "sm:pt-[26px]")}>
                     <Button
                       type="button"
@@ -667,7 +706,7 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
                       <span className="sm:sr-only">Quitar</span>
                     </Button>
                   </div>
-                  <div className="flex flex-col gap-3 sm:col-span-3">
+                  <div className="flex flex-col gap-3 sm:col-span-4">
                     {!conValor && (
                       <button
                         type="button"
@@ -804,7 +843,8 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
               <Plus strokeWidth={1.5} aria-hidden /> Agregar versión
             </Button>
             <p className="text-muted-foreground text-small">
-              Precio de lista, no el precio con bonos.
+              Lista = el precio más alto que publica la marca. Con bonos y/o financiamiento (opcional) = el más bajo; si lo
+              dejas vacío, se usa el que publique la fuente oficial y lo confirmas en Studio.
               {base != null && (
                 <>
                   {" "}Precio base de la PDP: <span className="text-foreground font-semibold tabular-nums">{formatCLP(base)}</span>,
