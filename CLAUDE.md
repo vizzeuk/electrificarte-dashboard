@@ -61,6 +61,12 @@ la escritura en Sanity; el panel solo muestra formulario y lista).
   `serverActions.bodySizeLimit` en `next.config.ts`) y la solicitud lleva solo `ficha_file_id`
   y `ficha_nombre` (en Corregir: sin la clave se conserva, `null` la quita). El agente la usa solo
   para specs técnicas que la web no trae; el precio, último recurso. Publicar después de la web.
+- **Ficha por versión (PDF, opcional):** "+ Ficha técnica de esta versión" en cada fila de versión.
+  Se sube igual (`subirFichaPdp`) y viaja **dentro** de la versión (`versiones[i].ficha_file_id` /
+  `ficha_nombre`). En Corregir, `versiones` va entera: una versión que conserva su ficha vuelve a
+  mandar su id; sin él, la web la borra. El PDF recién elegido vive en estado aparte (por id de
+  fila) hasta enviar. El agente la usa solo para las specs de esa versión. Solo la monta el
+  pdp-runner de la VPS; publicar después de la web (PR "ficha técnica por versión").
 - **Mock local** (los endpoints de la web aún no están desplegados):
   `node scripts/mock-pdp-api.mjs` (puerto 3401, secreto `mock-secreto-pdp`; el encabezado
   explica los gatillos para forzar 422/409/avisos) y en otra terminal

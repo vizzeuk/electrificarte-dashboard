@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAdminEmail } from "@/lib/auth/admin";
 import * as api from "@/lib/pdp-api";
-import { FICHA_MAX_BYTES, validarFicha, type PdpDatos, type PdpResultado, type PdpSolicitud } from "@/lib/pdp";
+import { esFichaId, FICHA_MAX_BYTES, validarFicha, type PdpDatos, type PdpResultado, type PdpSolicitud } from "@/lib/pdp";
 
 /**
  * Server actions de la sección PDPs. Cada una valida la sesión de admin ANTES de tocar la web:
@@ -41,17 +41,23 @@ function limpiar(d: Partial<PdpDatos>, parcial: boolean): { datos: Partial<PdpDa
   }
   if (req("versiones")) {
     const vs = Array.isArray(d.versiones) ? d.versiones : [];
+    let fichaMala = false;
     datos.versiones = vs.slice(0, 40).map((v) => {
       // Tipo/electrificación por versión: opcionales; si van vacíos, la clave no se manda.
       const tipo = texto(v?.tipo, 80);
       const electrificacion = texto(v?.electrificacion, 20);
+      // Ficha de la versión: opcional. Sin ella la clave no va (en Corregir, eso la quita).
+      const fichaId = v?.ficha_file_id;
+      if (fichaId != null && fichaId !== "" && !esFichaId(fichaId)) fichaMala = true;
       return {
         nombre: texto(v?.nombre, 120),
         precio: Number(v?.precio),
         ...(tipo ? { tipo } : {}),
         ...(electrificacion ? { electrificacion } : {}),
+        ...(esFichaId(fichaId) ? { ficha_file_id: fichaId, ficha_nombre: texto(v?.ficha_nombre, 120) || "ficha-tecnica.pdf" } : {}),
       };
     });
+    if (fichaMala) errores.push("La ficha técnica de una versión no se subió bien: vuelve a adjuntarla.");
     if (datos.versiones.some((v) => !v.nombre)) errores.push("Cada versión necesita un nombre.");
     if (datos.versiones.some((v) => !Number.isInteger(v.precio) || v.precio <= 0)) errores.push("Cada versión necesita un precio en pesos mayor a 0.");
   }
@@ -61,7 +67,7 @@ function limpiar(d: Partial<PdpDatos>, parcial: boolean): { datos: Partial<PdpDa
     if (id === null) {
       datos.ficha_file_id = null;
       datos.ficha_nombre = null;
-    } else if (typeof id === "string" && /^file_[A-Za-z0-9_-]{6,}$/.test(id)) {
+    } else if (esFichaId(id)) {
       datos.ficha_file_id = id;
       datos.ficha_nombre = texto(d.ficha_nombre, 120) || "ficha-tecnica.pdf";
     } else {

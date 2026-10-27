@@ -23,13 +23,16 @@ type Valores = {
   tipo: string;
   electrificacion: string;
   url_oficial: string;
-  /** tipo/electrificacion: IGUAL = "Igual que el modelo" (no se manda). */
-  versiones: { nombre: string; precio: string; tipo: string; electrificacion: string }[];
+  /**
+   * tipo/electrificacion: IGUAL = "Igual que el modelo" (no se manda). ficha_*: la ficha de la
+   * versión ya guardada en la web ("" = sin ficha); un PDF recién elegido vive aparte hasta subirlo.
+   */
+  versiones: { nombre: string; precio: string; tipo: string; electrificacion: string; ficha_file_id: string; ficha_nombre: string }[];
 };
 
 /** Valor del select para "Igual que el modelo" (Radix no acepta "" como valor de un ítem). */
 const IGUAL = "__igual__";
-const VERSION_VACIA = { nombre: "", precio: "", tipo: IGUAL, electrificacion: IGUAL };
+const VERSION_VACIA = { nombre: "", precio: "", tipo: IGUAL, electrificacion: IGUAL, ficha_file_id: "", ficha_nombre: "" };
 
 type ErrorServidor = Extract<PdpResultado<unknown>, { ok: false }>;
 
@@ -48,6 +51,8 @@ function aValores(s?: PdpSolicitud): Valores {
           precio: conPuntos(v.precio ?? ""),
           tipo: v.tipo || IGUAL,
           electrificacion: v.electrificacion || IGUAL,
+          ficha_file_id: v.ficha_file_id ?? "",
+          ficha_nombre: v.ficha_nombre ?? "",
         }))
       : [],
   };
@@ -70,6 +75,8 @@ function aDatos(v: Valores): PdpDatos {
         // "Igual que el modelo" o igual al del modelo → la clave no va (ni "" ni null).
         ...(x.tipo !== IGUAL && x.tipo !== v.tipo ? { tipo: x.tipo } : {}),
         ...(x.electrificacion !== IGUAL && x.electrificacion !== v.electrificacion ? { electrificacion: x.electrificacion } : {}),
+        // La ficha de la versión: si se conserva, su id vuelve a ir (en Corregir, sin él se borra).
+        ...(x.ficha_file_id ? { ficha_file_id: x.ficha_file_id, ficha_nombre: x.ficha_nombre || "ficha-tecnica.pdf" } : {}),
       })),
   };
 }
@@ -93,6 +100,77 @@ const TITULO_ERROR: Record<ErrorServidor["tipo"], string> = {
   no_autorizado: "Tu sesión no tiene permisos de administración",
 };
 
+/**
+ * Elegir una ficha técnica (PDF): el archivo elegido o el ya guardado, con "Quitar"; si no hay,
+ * el input. Lo usan la ficha del modelo y la de cada versión.
+ */
+function CampoFicha({
+  id,
+  archivo,
+  guardada,
+  error,
+  ayudaId,
+  onElegir,
+  onQuitar,
+  onSinFicha,
+}: {
+  id: string;
+  archivo: File | null;
+  guardada: string | null;
+  error: string | null;
+  ayudaId?: string;
+  onElegir: (archivo: File | undefined) => void;
+  onQuitar: () => void;
+  onSinFicha: () => void;
+}) {
+  return (
+    <>
+      {archivo || guardada ? (
+        <div className="flex items-center justify-between gap-3 rounded-control border py-2 pr-2 pl-3 text-small" data-testid={`${id}-elegida`}>
+          <span className="flex min-w-0 items-center gap-2">
+            <FileText className="text-muted-foreground size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+            <span className="truncate">{archivo ? archivo.name : guardada}</span>
+            <span className="text-muted-foreground shrink-0 tabular-nums">
+              {archivo ? `${(archivo.size / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : "ya adjunta"}
+            </span>
+          </span>
+          <Button type="button" variant="ghost" size="sm" onClick={onQuitar} className="shrink-0 cursor-pointer">
+            <X strokeWidth={1.5} aria-hidden /> Quitar
+          </Button>
+        </div>
+      ) : (
+        <Input
+          id={id}
+          type="file"
+          accept="application/pdf,.pdf"
+          aria-invalid={Boolean(error)}
+          aria-describedby={ayudaId}
+          onChange={(e) => {
+            const elegido = e.target.files?.[0];
+            // El input queda vacío: el archivo válido se muestra arriba, el inválido no queda elegido.
+            e.target.value = "";
+            onElegir(elegido);
+          }}
+          className="cursor-pointer"
+        />
+      )}
+      {error && (
+        <p className="text-destructive text-small">
+          {error}{" "}
+          <Button type="button" variant="link" size="sm" onClick={onSinFicha} className="cursor-pointer">
+            Enviar sin ficha
+          </Button>
+        </p>
+      )}
+    </>
+  );
+}
+
+/** null si el PDF sirve; si no, el error para mostrar junto al campo. */
+async function revisarPdf(archivo: File): Promise<string | null> {
+  return validarFicha(archivo.size, new Uint8Array(await archivo.slice(0, 5).arrayBuffer()));
+}
+
 export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solicitud?: PdpSolicitud }) {
   const router = useRouter();
   const corrigiendo = Boolean(solicitud);
@@ -109,15 +187,33 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
   async function elegirFicha(archivo: File | undefined) {
     setErrorFicha(null);
     if (!archivo) return;
-    const error = validarFicha(archivo.size, new Uint8Array(await archivo.slice(0, 5).arrayBuffer()));
+    const error = await revisarPdf(archivo);
     if (error) return setErrorFicha(error);
     setFicha(archivo);
+  }
+
+  // Ficha de cada versión, por el id de la fila (no por la posición: las filas se pueden quitar).
+  const [fichasVersion, setFichasVersion] = useState<Record<string, File>>({});
+  const [erroresFichaVersion, setErroresFichaVersion] = useState<Record<string, string>>({});
+  const [conCampoFicha, setConCampoFicha] = useState<Set<string>>(new Set());
+  const sinClave = <T,>(obj: Record<string, T>, k: string) => {
+    const { [k]: _fuera, ...resto } = obj;
+    return resto;
+  };
+
+  async function elegirFichaVersion(filaId: string, archivo: File | undefined) {
+    setErroresFichaVersion((prev) => sinClave(prev, filaId));
+    if (!archivo) return;
+    const error = await revisarPdf(archivo);
+    if (error) return setErroresFichaVersion((prev) => ({ ...prev, [filaId]: error }));
+    setFichasVersion((prev) => ({ ...prev, [filaId]: archivo }));
   }
 
   const {
     register,
     control,
     handleSubmit,
+    setValue,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<Valores>({ defaultValues: aValores(solicitud), mode: "onTouched" });
@@ -162,22 +258,42 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
   const enviar = handleSubmit(async (valores) => {
     setErrorServidor(null);
     // Un archivo inválido no se manda en silencio: se lleva al usuario al campo.
-    if (errorFicha) {
-      const campo = document.getElementById("pdp-ficha");
+    const iConError = versiones.fields.findIndex((f) => erroresFichaVersion[f.id]);
+    if (errorFicha || iConError >= 0) {
+      const campo = document.getElementById(errorFicha ? "pdp-ficha" : `pdp-v${iConError}-ficha`);
       campo?.scrollIntoView({ behavior: "smooth", block: "center" });
       campo?.focus({ preventScroll: true });
       return;
     }
-    const datos = aDatos(valores);
     try {
-      // La ficha se sube primero (aparte, por tamaño); la solicitud lleva solo su id.
-      let camposFicha: Partial<PdpDatos> = {};
-      if (ficha) {
+      // Las fichas se suben primero (aparte, por tamaño); la solicitud lleva solo sus ids.
+      const subir = async (archivo: File) => {
         const form = new FormData();
-        form.append("ficha", ficha);
-        const sub = await subirFichaPdp(form);
-        if (!sub.ok) return mostrarError(sub);
-        camposFicha = { ficha_file_id: sub.data.file_id, ficha_nombre: sub.data.nombre };
+        form.append("ficha", archivo);
+        return subirFichaPdp(form);
+      };
+      const deVersiones = versiones.fields
+        .map((f, i) => ({ i, archivo: fichasVersion[f.id] }))
+        .filter((x): x is { i: number; archivo: File } => Boolean(x.archivo));
+      const [subModelo, ...subVersiones] = await Promise.all([
+        ficha ? subir(ficha) : null,
+        ...deVersiones.map((x) => subir(x.archivo)),
+      ]);
+      const fallida = [subModelo, ...subVersiones].find((r) => r && !r.ok);
+      if (fallida && !fallida.ok) return mostrarError(fallida);
+      const conFichas = {
+        ...valores,
+        versiones: valores.versiones.map((v, i) => {
+          const j = deVersiones.findIndex((x) => x.i === i);
+          const sub = j >= 0 ? subVersiones[j] : null;
+          return sub?.ok ? { ...v, ficha_file_id: sub.data.file_id, ficha_nombre: sub.data.nombre } : v;
+        }),
+      };
+      const datos = aDatos(conFichas);
+
+      let camposFicha: Partial<PdpDatos> = {};
+      if (subModelo?.ok) {
+        camposFicha = { ficha_file_id: subModelo.data.file_id, ficha_nombre: subModelo.data.nombre };
       } else if (solicitud?.ficha_file_id && quitarFicha) {
         camposFicha = { ficha_file_id: null };
       }
@@ -440,49 +556,16 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
             <Label htmlFor="pdp-ficha">
               Ficha técnica oficial para Chile <span className="text-muted-foreground font-normal">(opcional, PDF de hasta 4 MB)</span>
             </Label>
-            {ficha || fichaGuardada ? (
-              <div className="flex items-center justify-between gap-3 rounded-control border py-2 pr-2 pl-3 text-small" data-testid="pdp-ficha-elegida">
-                <span className="flex min-w-0 items-center gap-2">
-                  <FileText className="text-muted-foreground size-4 shrink-0" strokeWidth={1.5} aria-hidden />
-                  <span className="truncate">{ficha ? ficha.name : fichaGuardada}</span>
-                  <span className="text-muted-foreground shrink-0 tabular-nums">
-                    {ficha ? `${(ficha.size / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : "ya adjunta"}
-                  </span>
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => (ficha ? setFicha(null) : setQuitarFicha(true))}
-                  className="shrink-0 cursor-pointer"
-                >
-                  <X strokeWidth={1.5} aria-hidden /> Quitar
-                </Button>
-              </div>
-            ) : (
-              <Input
-                id="pdp-ficha"
-                type="file"
-                accept="application/pdf,.pdf"
-                aria-invalid={Boolean(errorFicha)}
-                aria-describedby="pdp-ficha-ayuda"
-                onChange={(e) => {
-                  const archivo = e.target.files?.[0];
-                  // El input queda vacío: el archivo válido se muestra arriba, el inválido no queda elegido.
-                  e.target.value = "";
-                  void elegirFicha(archivo);
-                }}
-                className="cursor-pointer"
-              />
-            )}
-            {errorFicha && (
-              <p className="text-destructive text-small">
-                {errorFicha}{" "}
-                <Button type="button" variant="link" size="sm" onClick={() => setErrorFicha(null)} className="cursor-pointer">
-                  Enviar sin ficha
-                </Button>
-              </p>
-            )}
+            <CampoFicha
+              id="pdp-ficha"
+              archivo={ficha}
+              guardada={fichaGuardada}
+              error={errorFicha}
+              ayudaId="pdp-ficha-ayuda"
+              onElegir={(a) => void elegirFicha(a)}
+              onQuitar={() => (ficha ? setFicha(null) : setQuitarFicha(true))}
+              onSinFicha={() => setErrorFicha(null)}
+            />
             {quitarFicha && !ficha && solicitud?.ficha_nombre && (
               <p className="text-small">
                 Se va a quitar {solicitud.ficha_nombre}.{" "}
@@ -518,6 +601,10 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
               const fila = filas[i];
               const conValor = Boolean(fila) && (fila.tipo !== IGUAL || fila.electrificacion !== IGUAL);
               const abierta = conValor || distintas.has(f.id);
+              const archivoVersion = fichasVersion[f.id] ?? null;
+              const guardadaVersion = fila?.ficha_file_id ? fila.ficha_nombre || "ficha-tecnica.pdf" : null;
+              const errorVersion = erroresFichaVersion[f.id] ?? null;
+              const conFicha = Boolean(archivoVersion || guardadaVersion || errorVersion) || conCampoFicha.has(f.id);
               return (
                 <li key={f.id} className="grid gap-3 border-b pb-4 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_13rem_auto] sm:items-start">
                   <div className="flex flex-col gap-2">
@@ -568,7 +655,11 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => versiones.remove(i)}
+                      onClick={() => {
+                        versiones.remove(i);
+                        setFichasVersion((prev) => sinClave(prev, f.id));
+                        setErroresFichaVersion((prev) => sinClave(prev, f.id));
+                      }}
                       aria-label={`Quitar la versión ${i + 1}`}
                       className="cursor-pointer sm:size-12 sm:px-0"
                     >
@@ -580,6 +671,8 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
                     {!conValor && (
                       <button
                         type="button"
+                        // Sin esto, el blur del campo vacío pinta su error, la fila se corre y el clic se pierde.
+                        onMouseDown={(e) => e.preventDefault()}
                         aria-expanded={abierta}
                         aria-controls={`pdp-v${i}-distinta`}
                         onClick={() =>
@@ -650,6 +743,48 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
                         </p>
                       </div>
                     )}
+                    {!conFicha ? (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setConCampoFicha((prev) => new Set(prev).add(f.id))}
+                        className="text-link inline-flex cursor-pointer items-center gap-1 self-start text-small font-semibold underline-offset-4 hover:underline"
+                      >
+                        <Plus className="size-4" strokeWidth={1.5} aria-hidden />
+                        Ficha técnica de esta versión
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor={`pdp-v${i}-ficha`}>
+                          Ficha técnica de esta versión <span className="text-muted-foreground font-normal">(opcional, PDF de hasta 4 MB)</span>
+                        </Label>
+                        <CampoFicha
+                          id={`pdp-v${i}-ficha`}
+                          archivo={archivoVersion}
+                          guardada={guardadaVersion}
+                          error={errorVersion}
+                          ayudaId={`pdp-v${i}-ficha-ayuda`}
+                          onElegir={(a) => void elegirFichaVersion(f.id, a)}
+                          onQuitar={() => {
+                            if (archivoVersion) return setFichasVersion((prev) => sinClave(prev, f.id));
+                            setValue(`versiones.${i}.ficha_file_id`, "", { shouldDirty: true });
+                            setValue(`versiones.${i}.ficha_nombre`, "", { shouldDirty: true });
+                          }}
+                          onSinFicha={() => {
+                            setErroresFichaVersion((prev) => sinClave(prev, f.id));
+                            setConCampoFicha((prev) => {
+                              const next = new Set(prev);
+                              next.delete(f.id);
+                              return next;
+                            });
+                          }}
+                        />
+                        <p id={`pdp-v${i}-ficha-ayuda`} className="text-muted-foreground text-small">
+                          Solo si esta versión tiene su propio PDF (otra batería, motor o tracción). El agente lo usa para los
+                          datos técnicos de esta versión que la web no publica. El precio es el que pusiste arriba.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </li>
               );
@@ -657,7 +792,15 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
           </ul>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button type="button" variant="outline" size="sm" onClick={() => versiones.append({ ...VERSION_VACIA })} className="cursor-pointer">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              // El blur de un nombre vacío pinta su error y corre el botón: sin esto el clic se pierde.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => versiones.append({ ...VERSION_VACIA })}
+              className="cursor-pointer"
+            >
               <Plus strokeWidth={1.5} aria-hidden /> Agregar versión
             </Button>
             <p className="text-muted-foreground text-small">
@@ -692,7 +835,9 @@ export function PdpForm({ opciones, solicitud }: { opciones: PdpOpciones; solici
         </Button>
         <p className="text-muted-foreground text-small sm:ml-2" aria-live="polite">
           {isSubmitting
-            ? ficha ? "Subiendo la ficha y revisando que la URL responda. Puede tardar hasta 30 s." : "Revisando que la URL responda. Puede tardar hasta 15 s."
+            ? ficha || Object.keys(fichasVersion).length
+              ? "Subiendo las fichas y revisando que la URL responda. Puede tardar hasta 30 s."
+              : "Revisando que la URL responda. Puede tardar hasta 15 s."
             : "Revisamos que la URL esté viva antes de dejarla en cola."}
         </p>
       </div>

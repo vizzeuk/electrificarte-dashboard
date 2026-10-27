@@ -26,6 +26,12 @@ export interface PdpVersion {
    */
   tipo?: string | null;
   electrificacion?: string | null;
+  /**
+   * Ficha técnica (PDF) de ESTA versión, ya subida con `subirFichaPdp` (oct-2026). Opcional. Viaja
+   * dentro de `versiones`: en "Corregir", una versión que la conserva la vuelve a mandar.
+   */
+  ficha_file_id?: string | null;
+  ficha_nombre?: string | null;
 }
 
 export interface PdpOpciones {
@@ -158,6 +164,9 @@ export function accionesDe(s: PdpSolicitud, now: number): Acciones {
     sinTomar: s.estado === "listo" && now - ultimoMovimiento(s) > TREINTA_MIN,
   };
 }
+
+/** Mismo formato que acepta la web para el id de una ficha subida. */
+export const esFichaId = (v: unknown): v is string => typeof v === "string" && /^file_[A-Za-z0-9_-]{6,}$/.test(v);
 
 /** Ficha técnica: lo mismo que acepta la web (Vercel corta los request de más de 4,5 MB). */
 export const FICHA_MAX_BYTES = 4 * 1024 * 1024;

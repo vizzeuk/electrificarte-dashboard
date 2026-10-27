@@ -47,6 +47,8 @@
 //                                            más de 4 MB; 502 si el nombre contiene "falla". 201 con
 //                                            { ficha: { file_id, nombre } }. Crear y reintentar guardan
 //                                            ficha_file_id/ficha_nombre (null en reintentar = quitarla).
+//                                            Cada versión puede traer los suyos (se guardan en
+//                                            `versiones`); un id que no empieza con file_ da 422.
 // - POST /api/admin/pdp/solicitudes/cancelar {id} → 200 solo en "listo" (borra la fila, como la web);
 //                                            si no, 409.
 // - GET  /__stats (sin secreto)           → cuántas veces se llamó cada ruta (para los tests).
@@ -254,6 +256,7 @@ function validar(d, parcial = false) {
       for (const v of d.versiones) {
         if (v?.tipo != null && (v.tipo === "Van" || !OPCIONES.tipos.some((t) => t.valor === v.tipo))) errores.push(`El tipo de vehiculo "${v.tipo}" de la version "${v.nombre}" no existe en Sanity`);
         if (v?.electrificacion != null && !OPCIONES.electrificaciones.some((e) => e.valor === v.electrificacion)) errores.push(`La electrificacion "${v.electrificacion}" de la version "${v.nombre}" no existe en Sanity`);
+        if (v?.ficha_file_id != null && !/^file_[A-Za-z0-9_-]{6,}$/.test(String(v.ficha_file_id))) errores.push(`La ficha tecnica de la version "${v.nombre}" no se subio bien: vuelve a adjuntarla.`);
       }
     }
   }
