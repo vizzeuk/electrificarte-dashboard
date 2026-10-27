@@ -61,6 +61,11 @@ la escritura en Sanity; el panel solo muestra formulario y lista).
   `serverActions.bodySizeLimit` en `next.config.ts`) y la solicitud lleva solo `ficha_file_id`
   y `ficha_nombre` (en Corregir: sin la clave se conserva, `null` la quita). El agente la usa solo
   para specs técnicas que la web no trae; el precio, último recurso. Publicar después de la web.
+- **Dos precios por versión (oct-2026):** "Precio de lista" (el más alto que publica la marca) y
+  "Con bonos y/o financiamiento" (opcional, el más bajo; tiene que ser menor). Va como
+  `versiones[i].precio_financiamiento`; vacío = la clave no va y la web usa el que lea el agente con
+  su cita (queda un hallazgo para confirmar). El sitio muestra en grande el segundo. Publicar el
+  panel después de la web (PR "precios con financiamiento").
 - **Ficha por versión (PDF, opcional):** "+ Ficha técnica de esta versión" en cada fila de versión.
   Se sube igual (`subirFichaPdp`) y viaja **dentro** de la versión (`versiones[i].ficha_file_id` /
   `ficha_nombre`). En Corregir, `versiones` va entera: una versión que conserva su ficha vuelve a

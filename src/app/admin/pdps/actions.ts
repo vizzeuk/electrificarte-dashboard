@@ -42,6 +42,7 @@ function limpiar(d: Partial<PdpDatos>, parcial: boolean): { datos: Partial<PdpDa
   if (req("versiones")) {
     const vs = Array.isArray(d.versiones) ? d.versiones : [];
     let fichaMala = false;
+    let financiamientoMalo = false;
     datos.versiones = vs.slice(0, 40).map((v) => {
       // Tipo/electrificación por versión: opcionales; si van vacíos, la clave no se manda.
       const tipo = texto(v?.tipo, 80);
@@ -49,15 +50,19 @@ function limpiar(d: Partial<PdpDatos>, parcial: boolean): { datos: Partial<PdpDa
       // Ficha de la versión: opcional. Sin ella la clave no va (en Corregir, eso la quita).
       const fichaId = v?.ficha_file_id;
       if (fichaId != null && fichaId !== "" && !esFichaId(fichaId)) fichaMala = true;
+      const pf = v?.precio_financiamiento == null || String(v.precio_financiamiento) === "" ? null : Number(v.precio_financiamiento);
+      if (pf != null && (!Number.isInteger(pf) || pf <= 0 || pf >= Number(v?.precio))) financiamientoMalo = true;
       return {
         nombre: texto(v?.nombre, 120),
         precio: Number(v?.precio),
+        ...(pf != null && pf > 0 ? { precio_financiamiento: pf } : {}),
         ...(tipo ? { tipo } : {}),
         ...(electrificacion ? { electrificacion } : {}),
         ...(esFichaId(fichaId) ? { ficha_file_id: fichaId, ficha_nombre: texto(v?.ficha_nombre, 120) || "ficha-tecnica.pdf" } : {}),
       };
     });
     if (fichaMala) errores.push("La ficha técnica de una versión no se subió bien: vuelve a adjuntarla.");
+    if (financiamientoMalo) errores.push("El precio con bonos y/o financiamiento de una versión tiene que ser menor que su precio de lista.");
     if (datos.versiones.some((v) => !v.nombre)) errores.push("Cada versión necesita un nombre.");
     if (datos.versiones.some((v) => !Number.isInteger(v.precio) || v.precio <= 0)) errores.push("Cada versión necesita un precio en pesos mayor a 0.");
   }
